@@ -8,14 +8,14 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 
 from faultline.define.spec import Definition
 from faultline.eval import protocol as P
+from faultline.eval.audit import AUDIT_BETA, audit_estimate, audit_stats, bootstrap_interval, draw_audit
+from faultline.eval.audit import fbeta as _fbeta
+from faultline.eval.audit import fbeta_vec as _fb
 from faultline.eval.labels import match_incidents, public, window_labels
 from faultline.models import fit
 from faultline.quality.contract import normalize_wo, quality_report
 
 AS_OF = P.CUTOFF_WEEK * 7 - 1
-AUDIT_BETA = (
-    2.0  # 현장 확인으로 정의를 고를 때 재현율을 정밀도보다 두 배 무겁게 본다(근거: exp_metric_validity)
-)
 
 
 def _site_auc(scores: np.ndarray, y: np.ndarray, site: np.ndarray) -> float:
@@ -134,69 +134,6 @@ def _site_windows(prep: P.Prepared, defs: dict[str, Definition], site: int):
     return np.array(mats, dtype=bool), truth.astype(bool)
 
 
-def _fbeta(tp: float, pred: float, pos: float, beta: float = 1.0) -> float:
-    if tp <= 0 or pred <= 0 or pos <= 0:
-        return 0.0
-    p, r = tp / pred, tp / pos
-    b2 = beta * beta
-    return (1 + b2) * p * r / (b2 * p + r)
-
-
-def audit_stats(
-    L: np.ndarray, truth_sample: np.ndarray, idx_s1: np.ndarray, idx_s0: np.ndarray, n1_pop: int, n0_pop: int
-) -> tuple[np.ndarray, np.ndarray]:
-    """층화 표본에서 정의별 정밀도와 재현율을 추정한다.
-
-    하나라도 고장으로 표시한 창(S1)과 아무도 표시하지 않은 창(S0)에서 따로 뽑고, 층의 크기로 가중한다(Horvitz-Thompson).
-    정의가 표시한 창은 모두 S1 안에 있으므로 맞힌 수(TP)는 S1 표본에서, 전체 고장 창 수는 두 층의 표본에서 추정한다.
-    """
-    k1 = len(idx_s1)
-    w1 = n1_pop / max(k1, 1)
-    w0 = n0_pop / max(len(idx_s0), 1)
-    t_hat = w1 * truth_sample[:k1].sum() + w0 * truth_sample[k1:].sum()
-    prec = np.zeros(L.shape[0])
-    rec = np.zeros(L.shape[0])
-    for k in range(L.shape[0]):
-        pred = L[k].sum()
-        tp = w1 * truth_sample[:k1][L[k][idx_s1]].sum()
-        prec[k] = tp / pred if pred > 0 else 0.0
-        rec[k] = min(tp / t_hat, 1.0) if t_hat > 0 else 0.0
-    return prec, rec
-
-
-def _fb(prec: np.ndarray, rec: np.ndarray, beta: float) -> np.ndarray:
-    b2 = beta * beta
-    den = b2 * prec + rec
-    return np.where(den > 0, (1 + b2) * prec * rec / np.where(den > 0, den, 1.0), 0.0)
-
-
-def audit_estimate(
-    L: np.ndarray,
-    truth_sample: np.ndarray,
-    idx_s1: np.ndarray,
-    idx_s0: np.ndarray,
-    n1_pop: int,
-    n0_pop: int,
-    beta: float = AUDIT_BETA,
-) -> np.ndarray:
-    """층화 표본에서 정의별 F-beta 를 추정한다."""
-    prec, rec = audit_stats(L, truth_sample, idx_s1, idx_s0, n1_pop, n0_pop)
-    return _fb(prec, rec, beta)
-
-
-def draw_audit(
-    L: np.ndarray, n: int, rng: np.random.Generator, share_s1: float = 0.5
-) -> tuple[np.ndarray, np.ndarray, int, int]:
-    """현장에서 확인할 창을 뽑는다. 절반은 어느 정의든 고장으로 표시한 창에서, 나머지는 아무도 표시하지 않은 창에서."""
-    flagged = L.any(0)
-    s1, s0 = np.flatnonzero(flagged), np.flatnonzero(~flagged)
-    n1 = min(max(int(round(n * share_s1)), 1), len(s1))
-    n0 = min(max(n - n1, 1), len(s0))
-    a1 = rng.choice(s1, n1, replace=False) if len(s1) else np.array([], dtype=int)
-    a0 = rng.choice(s0, n0, replace=False)
-    return a1.astype(int), a0.astype(int), len(s1), len(s0)
-
-
 def exp_audit_demo(
     prep: P.Prepared,
     defs: dict[str, Definition],
@@ -231,19 +168,14 @@ def exp_audit_demo(
             sample = np.concatenate([T[a1], T[a0]])
             prec, rec = audit_stats(L, sample, a1, a0, n1p, n0p)
             est = _fb(prec, rec, beta)
-            boots = np.zeros((boot, len(names)))
-            for b in range(boot):
-                i1 = rng.integers(0, max(len(a1), 1), len(a1)) if len(a1) else np.array([], dtype=int)
-                i0 = rng.integers(0, len(a0), len(a0))
-                bs = np.concatenate([T[a1][i1], T[a0][i0]]) if len(a1) else T[a0][i0]
-                boots[b] = _fb(*audit_stats(L, bs, a1[i1], a0[i0], n1p, n0p), beta)
+            lo, hi = bootstrap_interval(L, T[a1], T[a0], a1, a0, n1p, n0p, beta, rng, boot)
             item["by_n"][str(n)] = {
                 "n": int(len(a1) + len(a0)),
                 "precision": prec.tolist(),
                 "recall": rec.tolist(),
                 "score": est.tolist(),
-                "lo": np.percentile(boots, 5, axis=0).tolist(),
-                "hi": np.percentile(boots, 95, axis=0).tolist(),
+                "lo": lo.tolist(),
+                "hi": hi.tolist(),
                 "pick": names[int(est.argmax())],
             }
         item["best"] = names[int(np.argmax(truth["score"]))]

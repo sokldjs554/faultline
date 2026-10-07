@@ -228,7 +228,7 @@ def stage_summary() -> None:
         read("validity"),
         read("robustness"),
     )
-    write("summary", S.build_summary(base, multi, drift, validity, base["audit"], rob))
+    write("summary", S.build_summary(base, multi, drift, validity, rob))
 
 
 def stage_manifest() -> None:

@@ -195,17 +195,30 @@ def flatline_runs(values: np.ndarray, min_len: int = 24) -> list[tuple[int, int]
     return runs
 
 
-def coerce_days(wo: pd.DataFrame) -> pd.DataFrame:
-    """생성일·종료일이 날짜 문자열이면 가장 이른 생성일을 0 으로 하는 일 수로 바꾼다. 이미 숫자면 그대로 둔다."""
+def day_origin(wo: pd.DataFrame) -> pd.Timestamp | None:
+    """생성일이 날짜 문자열이면 가장 이른 날짜, 이미 숫자면 None."""
     require_columns(wo)
-    out = wo.copy()
-    if pd.api.types.is_numeric_dtype(out["created_day"]):
-        return out
-    created = pd.to_datetime(out["created_day"], errors="coerce")
+    if pd.api.types.is_numeric_dtype(wo["created_day"]):
+        return None
+    created = pd.to_datetime(wo["created_day"], errors="coerce")
     if created.isna().all():
         raise ValueError("created_day 를 숫자나 날짜로 읽을 수 없다")
-    t0 = created.min()
-    out["created_day"] = (created - t0).dt.days
-    if "closed_day" in out.columns:
-        out["closed_day"] = (pd.to_datetime(out["closed_day"], errors="coerce") - t0).dt.days
+    return created.min()
+
+
+def to_days(col: pd.Series, t0: pd.Timestamp | None) -> pd.Series:
+    """날짜 열을 t0 를 0 으로 하는 일 수로 바꾼다. t0 가 None 이거나 이미 숫자면 그대로 둔다."""
+    if t0 is None or pd.api.types.is_numeric_dtype(col):
+        return col
+    return (pd.to_datetime(col, errors="coerce") - t0).dt.days
+
+
+def coerce_days(wo: pd.DataFrame) -> pd.DataFrame:
+    """생성일·종료일이 날짜 문자열이면 가장 이른 생성일을 0 으로 하는 일 수로 바꾼다. 이미 숫자면 그대로 둔다."""
+    t0 = day_origin(wo)
+    out = wo.copy()
+    if t0 is None:
+        return out
+    out["created_day"] = to_days(out["created_day"], t0)
+    out["closed_day"] = to_days(out["closed_day"], t0)
     return out

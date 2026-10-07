@@ -22,9 +22,7 @@ def test_summary_is_derived_from_the_other_artifacts():
     from run_all import _jsonable
 
     base, multi = load("base"), load("multiseed")
-    rebuilt = _jsonable(
-        S.build_summary(base, multi, load("drift"), load("validity"), base["audit"], load("robustness"))
-    )
+    rebuilt = _jsonable(S.build_summary(base, multi, load("drift"), load("validity"), load("robustness")))
     assert rebuilt == load("summary")
 
 
@@ -54,7 +52,7 @@ def test_honest_negative_results_are_still_true():
 
 
 def test_audit_curve_improves_with_more_checks():
-    a = load("base")["audit"]
+    a = load("multiseed")["base"]["audit"]
     assert a["regret"][0] > a["regret"][-1] and a["p_near"][0] < a["p_near"][-1]
 
 

@@ -76,7 +76,7 @@ def aggregate_runs(runs: list[dict]) -> dict:
 
 
 def build_summary(
-    base: dict, multi: dict, drift: dict, validity: dict, audit: dict, robustness: dict | None = None
+    base: dict, multi: dict, drift: dict, validity: dict, robustness: dict | None = None
 ) -> dict:
     """README 와 콘솔이 쓰는 대표 숫자. 키는 scripts/fill_numbers.py 마커에서 `summary.<경로>` 로 쓴다."""
     b, u = multi["base"], multi["uniform"]
@@ -88,7 +88,8 @@ def build_summary(
     ov = sens["overlap"]["matrix"]
     i1, i2 = names.index("d1_emergency"), names.index("d2_corrective")
     strat = b["strategies"]
-    n90 = audit["n_for_90pct"]
+    audit = multi["base"]["audit"]  # 시드 평균. 콘솔의 곡선과 같다
+    n90 = next((n for n, p in zip(audit["n_grid"], audit["p_near"], strict=True) if p >= 0.9), None)
     k80 = audit["n_grid"].index(80)
     rob = {}
     if robustness:
@@ -100,7 +101,49 @@ def build_summary(
                 "truth": v["truth"],
                 "d2_minus_d1": v["d2_corrective"] - v["d1_emergency"],
             }
+    mt = base["maturity"]["entry_delay_by_archetype"]
+    per = base["topk"]["per100_by_archetype"]
+    models = sens["models"]
+    by_t = {k: v for k, v in drift["by_target"].items()}
+    ascii_t = {"긴급 남용": "abuse", "긴급 안 씀": "no_emergency", "입력 누락": "missing", "표준": "standard"}
+    tgt = {}
+    for ko, key in ascii_t.items():
+        v = by_t.get(ko, {"n": 0, "detected": 0, "delays": []})
+        tgt[key] = {
+            "n": v["n"],
+            "detected": v["detected"],
+            "delay_median": float(np.median(v["delays"])) if v["delays"] else None,
+        }
     return {
+        "world": {k: v for k, v in base["world"].items() if k != "site_table"},
+        "mlp": {
+            "d1": models["d1_emergency"]["mlp"]["truth_auc"],
+            "d2": models["d2_corrective"]["mlp"]["truth_auc"],
+            "d3": models["d3_corroborated"]["mlp"]["truth_auc"],
+            "truth": models["truth"]["mlp"]["truth_auc"],
+        },
+        "hgb_seed7": {
+            "d1": models["d1_emergency"]["hgb"]["truth_auc"],
+            "d2": models["d2_corrective"]["hgb"]["truth_auc"],
+            "d3": models["d3_corroborated"]["hgb"]["truth_auc"],
+            "truth": models["truth"]["hgb"]["truth_auc"],
+            "oracle": models["oracle"]["hgb"]["truth_auc"],
+        },
+        "topk": {
+            "no_emergency_d1": per["긴급 안 씀"]["d1_emergency"],
+            "no_emergency_d3": per["긴급 안 씀"]["d3_corroborated"],
+            "no_emergency_random": per["긴급 안 씀"]["random"],
+            "standard_d1": per["표준"]["d1_emergency"],
+            "standard_d3": per["표준"]["d3_corroborated"],
+            "standard_random": per["표준"]["random"],
+        },
+        "delay": {
+            "late_median_days": mt["늦게 입력"]["median"],
+            "standard_median_days": mt["표준"]["median"],
+            "late_within_7": mt["늦게 입력"]["within"]["7"],
+            "standard_within_7": mt["표준"]["within"]["7"],
+        },
+        "drift_by_target": tgt,
         "robustness": rob,
         "worlds": {"base_seeds": len(b["seeds"]), "uniform_seeds": len(u["seeds"])},
         "auc": {

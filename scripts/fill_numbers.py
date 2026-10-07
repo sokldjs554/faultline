@@ -1,7 +1,7 @@
 """README/문서의 숫자를 artifacts 에서 채운다.
 
 문서에 `<!-- num:KEY -->값<!-- /num -->` 마커를 두면 KEY 에 해당하는 실측값으로 바꾼다. `--check` 는 불일치가 있으면 실패한다(CI).
-KEY 는 점 경로다: metrics.classifier.hgb_full.auroc 처럼 artifacts/<file>.json 안을 따라간다. 포맷은 `KEY|fmt` (예: |.3f, |.1%, |,d, |pp = 확률×100 소수 1자리).
+KEY 는 점 경로다: summary.auc.d1 처럼 artifacts/<file>.json 안을 따라간다. 포맷은 `KEY|fmt` (예: |.3f, |.1%, |,d, |pp = 확률×100 소수 1자리).
 """
 
 from __future__ import annotations
@@ -15,16 +15,18 @@ from pathlib import Path
 DOCS = [
     "README.md",
     "docs/design.md",
+    "docs/definitions.md",
     "docs/evaluation.md",
     "docs/failures.md",
     "docs/simulator.md",
     "docs/real-data.md",
+    "docs/research.md",
 ]
 PAT = re.compile(r"<!-- num:([^ ]+?) -->(.*?)<!-- /num -->", re.S)
 
 
 def resolve(artifacts: Path, key: str):
-    """KEY 의 첫 마디가 폴더(예: scenarios)면 둘째 마디가 파일 이름이다 — scenarios.base.audit.truth.ate_faultline"""
+    """KEY 의 첫 마디가 폴더면 둘째 마디가 파일 이름이다. 아니면 첫 마디가 artifacts/<이름>.json 의 이름이다."""
     parts = key.split(".")
     if (artifacts / parts[0]).is_dir():
         data = json.loads((artifacts / parts[0] / f"{parts[1]}.json").read_text())
