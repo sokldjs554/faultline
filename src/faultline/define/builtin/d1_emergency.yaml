@@ -1,0 +1,12 @@
+# 긴급으로 입력된 작업지시만 고장으로 본다. 가장 단순하고, 긴급을 쓰는 습관이 그대로 반영된다.
+name: d1_emergency
+version: 1
+description: 긴급 작업지시만 고장
+wo:
+  kinds: [emergency]
+  require: none
+complaints:
+  cluster:
+    enabled: false
+merge_window_days: 7
+event_time: earliest_evidence

@@ -1,0 +1,12 @@
+# 긴급 작업지시만 보되 같은 건으로 묶는 기간을 길게 잡는다. 병합 기간이 결과를 얼마나 바꾸는지 보려는 변형이다.
+name: d5_emergency_loose
+version: 1
+description: 긴급 작업지시만, 병합 기간 21일
+wo:
+  kinds: [emergency]
+  require: none
+complaints:
+  cluster:
+    enabled: false
+merge_window_days: 21
+event_time: earliest_evidence

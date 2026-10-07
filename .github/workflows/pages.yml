@@ -1,0 +1,35 @@
+name: pages
+on:
+  push:
+    branches: [main]
+    paths: ["docs/demo/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  # 업로드와 배포를 한 작업에서 이어 붙이면 배포 단계가 방금 올린 산출물을
+  # 못 찾는 경우가 있어("Found 0 artifact(s)") 공식 템플릿처럼 작업을 둘로 나눈다.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/demo
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

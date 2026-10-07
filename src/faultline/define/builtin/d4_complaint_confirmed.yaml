@@ -1,0 +1,13 @@
+# 시정 작업지시 중 같은 증상의 민원이 뒷받침하는 것만 본다. 긴급 표시는 믿지 않는다.
+name: d4_complaint_confirmed
+version: 1
+description: 민원이 뒷받침하는 작업지시만 (긴급 표시는 증거로 쓰지 않음)
+wo:
+  kinds: [emergency, corrective]
+  require: complaint
+complaints:
+  support_window_days: [-3, 14]
+  cluster:
+    enabled: false
+merge_window_days: 14
+event_time: earliest_evidence

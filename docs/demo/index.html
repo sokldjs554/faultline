@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>faultline — 정적 데모</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="banner">모든 데이터는 <b>합성(SYNTHETIC)</b>이다. 실제 설비 정보는 없다. 숫자는 방법을 검증한 결과이며 현실의 효과 크기를 뜻하지 않는다. <a href="https://github.com/sokldjs554/faultline/blob/main/docs/failures.md" target="_blank" rel="noopener">틀리는 경우와 한계</a></div>
+<header class="top">
+  <h1>faultline <small>고장을 어떻게 정의하느냐에 따라 달라지는 예지보전</small></h1>
+  <div class="spacer"></div>
+  <div class="ctrl"><button id="theme" type="button" aria-label="테마 전환">테마</button></div>
+</header>
+<div class="world-note" id="world-note"></div>
+<div class="kpis hero-kpis" id="hero" aria-live="polite"></div>
+<nav class="tabs" role="tablist" aria-label="화면">
+  <button role="tab" aria-selected="true" data-tab="define"><span class="n">1</span>고장 정의</button>
+  <button role="tab" aria-selected="false" data-tab="rank"><span class="n">2</span>점검 순서</button>
+  <button role="tab" aria-selected="false" data-tab="audit"><span class="n">3</span>현장 확인</button>
+  <span class="tabsep" aria-hidden="true"></span>
+  <button role="tab" aria-selected="false" data-tab="quality" class="minor">품질</button>
+  <button role="tab" aria-selected="false" data-tab="monitor" class="minor">감시</button>
+  <button role="tab" aria-selected="false" data-tab="bring" class="minor">내 로그</button>
+</nav>
+<main>
+  <section id="tab-define" class="tab">
+    <div class="headline"><h2>같은 로그에서 정의마다 다른 고장이 나온다</h2><p>한 사이트의 작업지시와 민원 로그에 정의 세 개를 적용했다. 맨 위 줄이 진짜 고장이고, 속이 찬 점은 진짜 고장과 14일 안에 맞는 사건이다.</p></div>
+    <div class="ctrl" style="margin-bottom:10px">
+      <label>사이트 기록 습관 <select id="def-arch" aria-label="사이트 기록 습관"></select></label>
+      <label>기간 <select id="def-range" aria-label="기간"><option value="52">마지막 1년</option><option value="156">전체 3년</option></select></label>
+    </div>
+    <div class="grid wide">
+      <div class="card"><h2>사건 타임라인</h2><div class="sub" id="def-sub"></div><div id="def-timeline"></div></div>
+      <div class="card"><h2>사이트 습관별 라벨 품질</h2><div class="sub">정의가 만든 사건을 진짜 고장과 맞춘 값. 사이트를 습관 유형으로 묶었다</div>
+        <div class="seg" role="group" aria-label="지표"><button type="button" id="hm-recall" aria-pressed="true">재현율</button><button type="button" id="hm-prec" aria-pressed="false">정밀도</button></div>
+        <div id="def-heat"></div></div>
+    </div>
+    <details class="more"><summary>더 자세히: 정의 파일과 전체 라벨 품질</summary>
+      <div class="grid wide">
+        <div class="card"><h2>정의 파일</h2><div class="sub">고객사 담당자가 읽고 고칠 수 있는 YAML이다</div><div class="ctrl"><select id="def-pick" aria-label="정의 선택"></select></div><div id="def-desc" class="sub" style="margin-top:8px"></div><pre class="code" id="def-yaml"></pre></div>
+        <div class="card"><h2>전체 라벨 품질</h2><div class="sub">16개 사이트, 3년. 사건과 진짜 고장을 같은 설비에서 14일 안이면 짝짓는다</div><div id="def-table"></div></div>
+      </div>
+    </details>
+  </section>
+
+  <section id="tab-rank" class="tab" hidden>
+    <div class="headline"><h2>정의를 바꾸면 점검 순서도 바뀐다</h2><p>설비, 특징, 모형은 그대로 두고 라벨만 바꿔 학습했다. 채점은 진짜 고장을 얼마나 잘 맞히는지(AUC)로 했다.</p></div>
+    <div class="grid wide">
+      <div class="card"><h2>자기 라벨로 채점할 때와 진짜 고장으로 채점할 때</h2><div class="sub" id="rk-sub"></div><div id="rk-dumbbell"></div></div>
+      <div class="card"><h2>점검 5곳이 겹치는 정도</h2><div class="sub">사이트·주마다 상위 5개 설비를 골랐을 때 두 정의의 선택이 겹친 비율(Jaccard). 시드 7</div><div id="rk-overlap"></div></div>
+    </div>
+    <div class="grid wide" style="margin-top:16px">
+      <div class="card"><h2>사이트 습관별 점검 적중</h2><div class="sub">점검 5곳을 100번 고를 때 4주 안에 실제로 고장 난 설비 수. 시드 7, 평가 구간</div><div id="rk-arch"></div></div>
+      <div class="callout" id="rk-note" style="align-self:start"></div>
+    </div>
+    <details class="more"><summary>더 자세히: 예시 주, 습관이 같은 세계, 전조 신호 가정, 라벨 지표 검증</summary>
+      <div class="grid wide">
+        <div class="card"><h2>점검 목록 예시</h2><div class="sub">같은 사이트, 같은 주에 정의별 모형이 고른 5곳. ●는 4주 안에 실제로 고장 난 설비</div><div class="ctrl"><select id="rk-ex" aria-label="예시 선택"></select></div><div id="rk-lists"></div></div>
+        <div class="card"><h2>습관이 모두 같은 세계</h2><div class="sub">대조군. 모든 사이트가 표준 습관일 때 정의 사이의 차이</div><div id="rk-uniform"></div></div>
+      </div>
+      <div class="grid wide" style="margin-top:16px">
+        <div class="card"><h2>전조 신호가 약해져도 d1이 낮은가</h2><div class="sub">시뮬레이터는 손상이 클수록 경미한 시정 작업지시와 약한 민원이 늘어난다고 가정한다. 이 가정의 세기를 줄여 봤다</div><div id="rk-rob"></div></div>
+        <div class="card"><h2>어떤 라벨 지표가 모형 성능과 같이 움직이나</h2><div class="sub">정의 6개를 시드마다 순위로 매겨 진짜 AUC와의 순위 상관(스피어만)을 구한 평균</div><div id="rk-valid"></div></div>
+      </div>
+    </details>
+  </section>
+
+  <section id="tab-audit" class="tab" hidden>
+    <div class="headline"><h2>정의를 믿으려면 현장에서 몇 건을 확인해야 하나</h2><p>고객 현장에서 설비·주 몇 건만 확인하면 정의별 정밀도와 재현율을 추정할 수 있다. 확인한 건수에 따라 추정이 얼마나 흔들리는지를 같은 사이트에서 직접 볼 수 있다.</p></div>
+    <div class="grid wide">
+      <div class="card"><h2>현장 확인 시뮬레이션</h2><div class="ctrl" style="margin-bottom:8px"><label>사이트 <select id="au-site" aria-label="사이트"></select></label><label>확인 건수 <input type="range" id="au-n" min="0" max="5" step="1" value="3" aria-label="확인 건수"> <b id="au-n-val"></b></label></div><div class="sub" id="au-sub"></div><div id="au-int"></div></div>
+      <div class="card"><h2>건수를 늘리면 좋아지는 정도</h2><div class="sub">사이트 16곳, 확인 표본을 300번 새로 뽑아 평균. 선택한 정의가 최선과 0.02 이내인 비율과, 최선을 못 골라 잃은 점수</div><div id="au-p"></div><div id="au-r" style="margin-top:12px"></div></div>
+    </div>
+    <div class="grid wide" style="margin-top:16px">
+      <div class="card"><h2>사이트마다 정의를 달리 고르면</h2><div class="sub" id="au-st-sub"></div><div id="au-strat"></div></div>
+      <div class="callout warn" id="au-note" style="align-self:start"></div>
+    </div>
+    <details class="more"><summary>더 자세히: 라벨이 성숙하는 데 걸리는 시간</summary>
+      <div class="grid wide">
+        <div class="card"><h2>고장 난 날부터 작업지시가 입력될 때까지</h2><div class="sub">습관 유형별 중앙값과 일정 기간 안에 입력된 비율</div><div id="au-delay"></div></div>
+        <div class="card"><h2>덜 성숙한 라벨로 학습하면</h2><div class="sub">정의 d3, 시드 7. 학습 기준 시점에 이미 입력된 기록만 쓴 경우와 충분히 기다린 경우</div><div id="au-mature"></div></div>
+      </div>
+    </details>
+  </section>
+
+  <section id="tab-quality" class="tab" hidden>
+    <div class="headline"><h2>정의를 쓰기 전에 로그부터 점검한다</h2><p>사이트마다 유형 코드가 다르고 빈 값과 중복이 섞여 있다. 샘플 로그(사이트 16곳)의 점검 결과다.</p></div>
+    <div class="ctrl" style="margin-bottom:10px"><div class="seg" role="group" aria-label="코드표"><button type="button" id="q-raw" aria-pressed="true">코드표 없이</button><button type="button" id="q-book" aria-pressed="false">코드표 적용</button></div></div>
+    <div class="kpis" id="q-kpis"></div>
+    <div class="grid wide">
+      <div class="card"><h2>먼저 고칠 문제</h2><div class="sub" id="q-issues-sub"></div><div id="q-issues"></div></div>
+      <div class="card"><h2>코드표가 라벨에 주는 영향</h2><div class="sub" id="q-effect-sub"></div><div id="q-effect"></div></div>
+    </div>
+    <details class="more"><summary>더 자세히: 사이트별 점검표</summary><div class="card"><div id="q-table"></div></div></details>
+  </section>
+
+  <section id="tab-monitor" class="tab" hidden>
+    <div class="headline"><h2>기록 습관이 바뀌면 정의의 뜻이 바뀐다</h2><p>사이트 4곳이 100주째에 습관을 바꾼 세계를 만들고, 정답 없이 작업지시 로그만으로 얼마나 빨리 알아채는지 쟀다. 시드 5개.</p></div>
+    <div class="kpis" id="mo-kpis"></div>
+    <div class="grid wide">
+      <div class="card"><h2>사이트별 신호와 경보</h2><div class="ctrl" style="margin-bottom:8px"><label>사이트 <select id="mo-site" aria-label="사이트"></select></label><label>신호 <select id="mo-sig" aria-label="신호"></select></label></div><div class="sub" id="mo-sub"></div><div id="mo-series"></div><div id="mo-cusum" style="margin-top:12px"></div></div>
+      <div class="card"><h2>바뀐 습관별 탐지</h2><div class="sub">시드 5개, 바뀐 사이트 20곳</div><div id="mo-target"></div><h3>바뀐 사이트에서 라벨 품질</h3><div class="sub">습관이 바뀐 뒤 같은 정의의 F1이 떨어진다</div><div id="mo-label"></div></div>
+    </div>
+  </section>
+
+  <section id="tab-bring" class="tab" hidden>
+    <div class="headline"><h2>내 로그와 내 정의로 실행</h2><p>작업지시 CSV를 올리면 품질 점검이 돌고, 정의 YAML을 쓰면 데모 세계에서 라벨 품질을 잰다. 정적 데모에서는 서버가 없어 실행되지 않는다.</p></div>
+    <div class="grid wide">
+      <div class="card"><h2>작업지시 로그 점검</h2><div class="sub">필요한 열</div><div id="bring-schema"></div><div class="upload" id="bring-upload"></div><div id="bring-out"></div></div>
+      <div class="card"><h2>고장 정의 평가</h2><div class="sub">YAML을 고치고 평가를 누르면 데모 세계(합성, 정답을 안다)에 적용한다</div><div id="bring-def"></div></div>
+    </div>
+  </section>
+</main>
+<footer>
+  <a href="https://github.com/sokldjs554/faultline" target="_blank" rel="noopener">GitHub</a>
+  <a href="https://github.com/sokldjs554/faultline/blob/main/docs/design.md" target="_blank" rel="noopener">설계</a>
+  <a href="https://github.com/sokldjs554/faultline/blob/main/docs/evaluation.md" target="_blank" rel="noopener">평가</a>
+  <a href="https://github.com/sokldjs554/faultline/blob/main/docs/failures.md" target="_blank" rel="noopener">틀리는 경우와 한계</a>
+  <span id="foot-meta"></span>
+</footer>
+<script>window.FAULTLINE_STATIC = true;</script>
+<script src="charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

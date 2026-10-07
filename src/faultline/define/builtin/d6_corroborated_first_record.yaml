@@ -1,0 +1,17 @@
+# D3 와 같지만 사건 시각을 '작업지시가 입력된 날'로 잡는다. 민원이 먼저 들어온 건도 입력일로 밀린다.
+# 사건 시각 규칙이 라벨을 얼마나 밀어내는지 보려는 변형이다.
+name: d6_corroborated_first_record
+version: 1
+description: D3 와 같고 사건 시각은 작업지시 입력일
+wo:
+  kinds: [emergency, corrective]
+  require: emergency_or_complaint
+complaints:
+  support_window_days: [-3, 14]
+  cluster:
+    enabled: true
+    min_count: 3
+    window_days: 5
+    require_unique_asset: true
+merge_window_days: 14
+event_time: first_record

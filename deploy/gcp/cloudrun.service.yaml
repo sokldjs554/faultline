@@ -1,0 +1,20 @@
+# gcloud run services replace deploy/gcp/cloudrun.service.yaml --region asia-northeast3
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: faultline
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "3"
+    spec:
+      containerConcurrency: 8
+      timeoutSeconds: 900   # 감사 업로드가 수 분 걸릴 수 있다
+      containers:
+        - image: asia-northeast3-docker.pkg.dev/PROJECT_ID/faultline/api:latest
+          ports: [{containerPort: 8000}]
+          resources: {limits: {cpu: "2", memory: 2Gi}}
+          env:
+            - {name: FAULTLINE_ARTIFACT_DIR, value: /app/artifacts}
+          startupProbe: {httpGet: {path: /health, port: 8000}, periodSeconds: 5, failureThreshold: 10}

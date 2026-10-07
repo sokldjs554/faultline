@@ -1,0 +1,17 @@
+# 시정 작업지시 중 긴급이거나 같은 증상의 민원이 뒷받침하는 것만 고장으로 본다.
+# 작업지시가 없어도 같은 증상의 민원이 모이고 설비가 하나로 특정되면 고장으로 본다.
+name: d3_corroborated
+version: 1
+description: 긴급이거나 민원이 뒷받침하는 작업지시, 민원 군집 포함
+wo:
+  kinds: [emergency, corrective]
+  require: emergency_or_complaint
+complaints:
+  support_window_days: [-3, 14]
+  cluster:
+    enabled: true
+    min_count: 3
+    window_days: 5
+    require_unique_asset: true
+merge_window_days: 14
+event_time: earliest_evidence

@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.env
+*.log
+.DS_Store
+# 시뮬레이션 원자료는 `make data` 로 다시 만든다 (artifacts/*.json 과 docs/demo 는 커밋)
+data/*.parquet

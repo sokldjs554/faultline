@@ -1,0 +1,12 @@
+# 예방 점검이 아닌 모든 작업지시를 고장으로 본다. 놓치는 고장은 적지만 소모품 교체와 점검 후 보수가 섞인다.
+name: d2_corrective
+version: 1
+description: 예방 점검이 아닌 작업지시 전부
+wo:
+  kinds: [emergency, corrective]
+  require: none
+complaints:
+  cluster:
+    enabled: false
+merge_window_days: 7
+event_time: earliest_evidence
