@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from faultline.define.engine import SYM_CODE, SYMPTOMS, _compat
+from faultline.define.engine import SYM_CODE, _compat
 from faultline.sim.world import CATS
 
 CAT_CODE = {c.key: i for i, c in enumerate(CATS)}
@@ -70,7 +70,9 @@ def build_features(
 ) -> FeatureSet:
     A = len(assets)
     apos = pd.Series(np.arange(A), index=assets["asset"].to_numpy())
-    wo = wo_norm[wo_norm["asset"].notna()].drop_duplicates(subset=["wo_id", "asset", "created_day", "type_raw"])
+    wo = wo_norm[wo_norm["asset"].notna()].drop_duplicates(
+        subset=["wo_id", "asset", "created_day", "type_raw"]
+    )
     ai = apos.reindex(wo["asset"].astype(int).to_numpy()).to_numpy()
     wo = wo[~np.isnan(ai)]
     ai = ai[~np.isnan(ai)].astype(int)
@@ -123,7 +125,7 @@ def build_features(
     site_np = np.zeros((A, n_weeks), dtype=np.float32)
     site_em = np.zeros((A, n_weeks), dtype=np.float32)
     np26, em26 = _roll(c_np, 26), _roll(c_em, 26)
-    for s, idx in site_idx.items():
+    for idx in site_idx.values():
         tot_np, tot_em = np26[idx].sum(0), em26[idx].sum(0)
         site_np[idx] = (tot_np / len(idx))[None, :]
         site_em[idx] = (tot_em / np.maximum(tot_np, 1.0))[None, :]

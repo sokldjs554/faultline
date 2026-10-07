@@ -164,7 +164,7 @@
     const svg = el("svg:svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opts.label || "" });
     const vals = rows.flatMap((r) => [r.value, r.hi ?? r.value]);
     const neg = Math.min(0, ...rows.map((r) => r.value)), pos = Math.max(opts.max ?? 0, ...vals);
-    const x0 = labelW, x1 = W - valueW, sx = (v) => x0 + ((v - neg) / (pos - neg || 1)) * (x1 - x0), zero = sx(0);
+    const x0 = labelW + (neg < 0 ? 48 : 0), x1 = W - valueW, sx = (v) => x0 + ((v - neg) / (pos - neg || 1)) * (x1 - x0), zero = sx(0);
     svg.appendChild(el("svg:line", { x1: zero, x2: zero, y1: 0, y2: H, stroke: "var(--axis)" }));
     rows.forEach((r, i) => {
       const y = 3 + i * (bh + gap), w = Math.max(1, Math.abs(sx(r.value) - zero)), rx = 4;

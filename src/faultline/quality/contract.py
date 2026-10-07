@@ -25,11 +25,15 @@ def clean_code(x) -> str:
     return "" if pd.isna(x) else str(x).strip().upper()
 
 
-def normalize_wo(wo: pd.DataFrame, code_book: dict[str, str] | None = None) -> pd.DataFrame:
-    """작업지시 유형을 정규화해 `wo_kind` 열을 붙인다. 코드표는 사이트가 쓰는 코드를 직접 지정한다."""
+def require_columns(wo: pd.DataFrame) -> None:
     missing = [c for c in REQUIRED_WO_COLUMNS if c not in wo.columns]
     if missing:
         raise ValueError(f"작업지시 표에 필요한 열이 없다: {missing}")
+
+
+def normalize_wo(wo: pd.DataFrame, code_book: dict[str, str] | None = None) -> pd.DataFrame:
+    """작업지시 유형을 정규화해 `wo_kind` 열을 붙인다. 코드표는 사이트가 쓰는 코드를 직접 지정한다."""
+    require_columns(wo)
     book = {clean_code(k): v for k, v in (code_book or {}).items()}
     bad = [v for v in book.values() if v not in KINDS]
     if bad:
@@ -55,7 +59,11 @@ def suggest_code_book(wo: pd.DataFrame, site: int | None = None) -> dict[str, di
     guess = ["preventive", "corrective", "emergency"]
     out = {}
     for i, code in enumerate(order[:3]):
-        out[code] = {"kind": guess[i], "count": int(freq[code]), "confidence": "낮음" if len(order) != 3 else "보통"}
+        out[code] = {
+            "kind": guess[i],
+            "count": int(freq[code]),
+            "confidence": "낮음" if len(order) != 3 else "보통",
+        }
     return out
 
 
@@ -107,11 +115,25 @@ def quality_report(
                 }
             )
         if miss_asset / n_u > 0.03:
-            issues.append({"site": int(site), "level": "mid", "text": f"설비 번호가 빈 작업지시 {miss_asset / n_u:.1%}. 이 기록은 정의에 쓸 수 없음"})
+            issues.append(
+                {
+                    "site": int(site),
+                    "level": "mid",
+                    "text": f"설비 번호가 빈 작업지시 {miss_asset / n_u:.1%}. 이 기록은 정의에 쓸 수 없음",
+                }
+            )
         if exact_dup / max(n, 1) > 0.005:
-            issues.append({"site": int(site), "level": "low", "text": f"완전히 같은 행 {exact_dup}개. 병합 전에 제거해야 함"})
+            issues.append(
+                {
+                    "site": int(site),
+                    "level": "low",
+                    "text": f"완전히 같은 행 {exact_dup}개. 병합 전에 제거해야 함",
+                }
+            )
         if inverted / n_u > 0.003:
-            issues.append({"site": int(site), "level": "low", "text": f"종료일이 생성일보다 앞선 행 {inverted}개"})
+            issues.append(
+                {"site": int(site), "level": "low", "text": f"종료일이 생성일보다 앞선 행 {inverted}개"}
+            )
     # 사이트 간 비교: 긴급 유형을 쓰는 정도가 다른 사이트와 크게 다르면 긴급 작업지시를 고장으로 보는 정의를 믿기 어렵다
     shares = [r["emergency_share"] for r in rows]
     med = float(np.median(shares)) if shares else 0.0
@@ -121,9 +143,21 @@ def quality_report(
             if r["unknown_type"] / max(r["work_orders"], 1) > 0.05:
                 continue  # 코드를 읽지 못한 사이트는 긴급 비중을 말할 수 없다
             if x < 0.25 * med:
-                issues.append({"site": r["site"], "level": "high", "text": f"긴급 유형이 시정·긴급 작업지시의 {x:.0%}뿐임(사이트 중앙값 {med:.0%}). 긴급만 고장으로 보는 정의는 이 사이트의 고장을 대부분 놓침"})
+                issues.append(
+                    {
+                        "site": r["site"],
+                        "level": "high",
+                        "text": f"긴급 유형이 시정·긴급 작업지시의 {x:.0%}뿐임(사이트 중앙값 {med:.0%}). 긴급만 고장으로 보는 정의는 이 사이트의 고장을 대부분 놓침",
+                    }
+                )
             elif x > 1.8 * med:
-                issues.append({"site": r["site"], "level": "mid", "text": f"긴급 유형이 {x:.0%}로 사이트 중앙값 {med:.0%}의 1.8배를 넘음. 경미한 작업까지 긴급으로 입력했을 수 있고, 긴급만 고장으로 보면 오탐이 많음"})
+                issues.append(
+                    {
+                        "site": r["site"],
+                        "level": "mid",
+                        "text": f"긴급 유형이 {x:.0%}로 사이트 중앙값 {med:.0%}의 1.8배를 넘음. 경미한 작업까지 긴급으로 입력했을 수 있고, 긴급만 고장으로 보면 오탐이 많음",
+                    }
+                )
     issues.sort(key=lambda i: ("high", "mid", "low").index(i["level"]))
     df = pd.DataFrame(rows)
     out = {
@@ -142,7 +176,9 @@ def quality_report(
         out["complaints"] = {
             "rows": int(len(complaints)),
             "missing_floor": int(complaints["floor"].isna().sum()),
-            "hint_share": float(complaints["hint_asset"].notna().mean()) if "hint_asset" in complaints else 0.0,
+            "hint_share": float(complaints["hint_asset"].notna().mean())
+            if "hint_asset" in complaints
+            else 0.0,
         }
     return out
 
@@ -161,6 +197,7 @@ def flatline_runs(values: np.ndarray, min_len: int = 24) -> list[tuple[int, int]
 
 def coerce_days(wo: pd.DataFrame) -> pd.DataFrame:
     """생성일·종료일이 날짜 문자열이면 가장 이른 생성일을 0 으로 하는 일 수로 바꾼다. 이미 숫자면 그대로 둔다."""
+    require_columns(wo)
     out = wo.copy()
     if pd.api.types.is_numeric_dtype(out["created_day"]):
         return out

@@ -50,8 +50,6 @@ def main() -> None:
         save("/v1/definitions")
         for name in ("same-log", "ranking", "audit", "monitor"):
             save(f"/v1/screens/{name}")
-        save("/v1/quality/sample")
-        save("/v1/quality/sample-with-code-book")
 
     cdir = Path(api.CONSOLE)
     for f in ("style.css", "charts.js", "app.js"):

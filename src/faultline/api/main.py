@@ -50,7 +50,11 @@ def health():
 
 @app.get("/version")
 def version():
-    return {"version": __version__, "manifest": store.artifact("manifest"), "summary": store.artifact("summary")}
+    return {
+        "version": __version__,
+        "manifest": store.artifact("manifest"),
+        "summary": store.artifact("summary"),
+    }
 
 
 @app.get("/metrics", response_class=PlainTextResponse)
@@ -79,7 +83,15 @@ def screen(name: str):
 def definitions():
     out = []
     for name, d in spec.builtin().items():
-        out.append({"name": name, "version": d.version, "description": d.description, "spec": d.to_dict(), "yaml": spec.builtin_text(name)})
+        out.append(
+            {
+                "name": name,
+                "version": d.version,
+                "description": d.description,
+                "spec": d.to_dict(),
+                "yaml": spec.builtin_text(name),
+            }
+        )
     return {"definitions": out, "template": spec.builtin_text("d3_corroborated")}
 
 
@@ -136,7 +148,13 @@ def _book(text: str | None) -> dict[str, str] | None:
     return book
 
 
-def _report(wo: pd.DataFrame, cm: pd.DataFrame | None, assets: pd.DataFrame | None, book: dict | None, weeks: int | None) -> dict:
+def _report(
+    wo: pd.DataFrame,
+    cm: pd.DataFrame | None,
+    assets: pd.DataFrame | None,
+    book: dict | None,
+    weeks: int | None,
+) -> dict:
     try:
         wo = coerce_days(wo)
         books = None if book is None else {int(s): book for s in wo["site"].unique()}
@@ -149,7 +167,9 @@ def _report(wo: pd.DataFrame, cm: pd.DataFrame | None, assets: pd.DataFrame | No
 
 @app.post("/v1/quality")
 async def quality(
-    file: UploadFile = File(..., description="작업지시 CSV: wo_id, site, asset, created_day, closed_day, type_raw"),
+    file: UploadFile = File(
+        ..., description="작업지시 CSV: wo_id, site, asset, created_day, closed_day, type_raw"
+    ),
     complaints: UploadFile | None = File(None),
     assets: UploadFile | None = File(None),
     code_book: str | None = Form(None, description='{"A1":"emergency"} 처럼 코드를 유형으로 옮기는 JSON'),
@@ -184,16 +204,28 @@ def schema():
             {"column": "wo_id", "type": "int|str", "meaning": "작업지시 번호"},
             {"column": "site", "type": "int|str", "meaning": "사이트(고객사·건물)"},
             {"column": "asset", "type": "int|str|빈 값", "meaning": "설비 번호. 비면 정의에 쓸 수 없다"},
-            {"column": "created_day", "type": "int|날짜", "meaning": "생성일. 날짜면 가장 이른 날을 0 으로 바꾼다"},
+            {
+                "column": "created_day",
+                "type": "int|날짜",
+                "meaning": "생성일. 날짜면 가장 이른 날을 0 으로 바꾼다",
+            },
             {"column": "closed_day", "type": "int|날짜", "meaning": "종료일"},
-            {"column": "type_raw", "type": "str", "meaning": "고객사가 쓰는 유형 코드(긴급, URGENT, E, A1 ...)"},
+            {
+                "column": "type_raw",
+                "type": "str",
+                "meaning": "고객사가 쓰는 유형 코드(긴급, URGENT, E, A1 ...)",
+            },
         ],
         "kinds": list(KINDS),
     }
 
 
 def _csv(df: pd.DataFrame, name: str) -> Response:
-    return Response(df.to_csv(index=False), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={name}"})
+    return Response(
+        df.to_csv(index=False),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={name}"},
+    )
 
 
 @app.get("/v1/sample/work_orders.csv")

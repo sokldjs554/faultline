@@ -72,7 +72,7 @@
     <div class="headline"><h2>정의를 믿으려면 현장에서 몇 건을 확인해야 하나</h2><p>고객 현장에서 설비·주 몇 건만 확인하면 정의별 정밀도와 재현율을 추정할 수 있다. 확인한 건수에 따라 추정이 얼마나 흔들리는지를 같은 사이트에서 직접 볼 수 있다.</p></div>
     <div class="grid wide">
       <div class="card"><h2>현장 확인 시뮬레이션</h2><div class="ctrl" style="margin-bottom:8px"><label>사이트 <select id="au-site" aria-label="사이트"></select></label><label>확인 건수 <input type="range" id="au-n" min="0" max="5" step="1" value="3" aria-label="확인 건수"> <b id="au-n-val"></b></label></div><div class="sub" id="au-sub"></div><div id="au-int"></div></div>
-      <div class="card"><h2>건수를 늘리면 좋아지는 정도</h2><div class="sub">사이트 16곳, 확인 표본을 300번 새로 뽑아 평균. 선택한 정의가 최선과 0.02 이내인 비율과, 최선을 못 골라 잃은 점수</div><div id="au-p"></div><div id="au-r" style="margin-top:12px"></div></div>
+      <div class="card"><h2>건수를 늘리면 좋아지는 정도</h2><div class="sub">사이트 16곳에서 확인 표본을 300번 새로 뽑아 평균했다. 건수는 가로축이다</div><h3>최선과 0.02 이내인 정의를 고른 비율</h3><div id="au-p"></div><h3>최선을 못 골라 잃은 점수</h3><div id="au-r"></div></div>
     </div>
     <div class="grid wide" style="margin-top:16px">
       <div class="card"><h2>사이트마다 정의를 달리 고르면</h2><div class="sub" id="au-st-sub"></div><div id="au-strat"></div></div>
@@ -87,7 +87,7 @@
   </section>
 
   <section id="tab-quality" class="tab" hidden>
-    <div class="headline"><h2>정의를 쓰기 전에 로그부터 점검한다</h2><p>사이트마다 유형 코드가 다르고 빈 값과 중복이 섞여 있다. 샘플 로그(사이트 16곳)의 점검 결과다.</p></div>
+    <div class="headline"><h2>정의를 쓰기 전에 로그부터 점검한다</h2><p>사이트마다 유형 코드가 다르고 빈 값과 중복이 섞여 있다. 합성 세계 전체(사이트 16곳)의 점검 결과다.</p></div>
     <div class="ctrl" style="margin-bottom:10px"><div class="seg" role="group" aria-label="코드표"><button type="button" id="q-raw" aria-pressed="true">코드표 없이</button><button type="button" id="q-book" aria-pressed="false">코드표 적용</button></div></div>
     <div class="kpis" id="q-kpis"></div>
     <div class="grid wide">

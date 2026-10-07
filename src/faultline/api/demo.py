@@ -30,7 +30,9 @@ def evaluate_definition(defn: Definition, train: bool = False) -> dict:
     by_arch = {}
     for a in arch.unique():
         sites = arch[arch == a].index
-        by_arch[a] = public(match_incidents(inc[inc["site"].isin(sites)], w.failures[w.failures["site"].isin(sites)]))
+        by_arch[a] = public(
+            match_incidents(inc[inc["site"].isin(sites)], w.failures[w.failures["site"].isin(sites)])
+        )
     out = {
         "definition": defn.to_dict(),
         "incidents": int(len(inc)),
@@ -44,7 +46,11 @@ def evaluate_definition(defn: Definition, train: bool = False) -> dict:
         y = P.labels_for(prep, defn, E.AS_OF)
         r, _ = E._metrics(prep, E._score(prep, y), P.labels_for(prep, defn, None))
         out["model"] = {k: r[k] for k in ("truth_auc", "truth_ap", "truth_per100", "own_auc")}
-        ref = {n: E._metrics(prep, E._score(prep, P.labels_for(prep, d, E.AS_OF)), None)[0]["truth_auc"] for n, d in builtin().items() if n in ("d1_emergency", "d2_corrective")}
+        ref = {
+            n: E._metrics(prep, E._score(prep, P.labels_for(prep, d, E.AS_OF)), None)[0]["truth_auc"]
+            for n, d in builtin().items()
+            if n in ("d1_emergency", "d2_corrective")
+        }
         out["model"]["reference_truth_auc"] = ref
     return out
 
@@ -54,6 +60,17 @@ def sample_tables() -> dict:
     w = prepared().world
     sites = list(SAMPLE_SITES)
     assets = w.assets[w.assets["site"].isin(sites)]
-    wo = w.wo[w.wo["site"].isin(sites)][["wo_id", "site", "asset", "created_day", "closed_day", "type_raw"]]
-    cm = w.complaints[w.complaints["site"].isin(sites)]
-    return {"work_orders": wo, "complaints": cm, "assets": assets, "weeks": w.cfg.weeks, "n_sites": len(np.unique(sites))}
+    wo = w.wo[w.wo["site"].isin(sites)][
+        ["wo_id", "site", "asset", "created_day", "closed_day", "type_raw"]
+    ].copy()
+    wo["asset"] = wo["asset"].astype("Int64")  # 빈 값이 있어도 CSV 에 34.0 이 아니라 34 로 쓴다
+    cm = w.complaints[w.complaints["site"].isin(sites)].copy()
+    if "hint_asset" in cm:
+        cm["hint_asset"] = cm["hint_asset"].astype("Int64")
+    return {
+        "work_orders": wo,
+        "complaints": cm,
+        "assets": assets,
+        "weeks": w.cfg.weeks,
+        "n_sites": len(np.unique(sites)),
+    }

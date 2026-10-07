@@ -75,10 +75,14 @@ class Habit:
 ARCHETYPES: dict[str, Habit] = {
     "표준": Habit("표준", 0.90, 0.30, 0.03, 0.97, 0.90, 2.0, 0.05, 0.70, 0.35, 0.010, 0.010, "ko"),
     "긴급 안 씀": Habit("긴급 안 씀", 0.04, 0.02, 0.0, 0.95, 0.88, 3.0, 0.06, 0.65, 0.30, 0.010, 0.020, "en"),
-    "긴급 남용": Habit("긴급 남용", 0.97, 0.85, 0.55, 0.97, 0.92, 1.0, 0.05, 0.70, 0.35, 0.020, 0.020, "short"),
+    "긴급 남용": Habit(
+        "긴급 남용", 0.97, 0.85, 0.55, 0.97, 0.92, 1.0, 0.05, 0.70, 0.35, 0.020, 0.020, "short"
+    ),
     "입력 누락": Habit("입력 누락", 0.88, 0.25, 0.02, 0.55, 0.35, 3.0, 0.05, 0.85, 0.50, 0.008, 0.060, "ko"),
     "늦게 입력": Habit("늦게 입력", 0.90, 0.30, 0.03, 0.95, 0.88, 14.0, 0.08, 0.70, 0.35, 0.010, 0.020, "en"),
-    "코드 다름": Habit("코드 다름", 0.90, 0.30, 0.03, 0.97, 0.90, 2.0, 0.05, 0.70, 0.35, 0.010, 0.010, "code"),
+    "코드 다름": Habit(
+        "코드 다름", 0.90, 0.30, 0.03, 0.97, 0.90, 2.0, 0.05, 0.70, 0.35, 0.010, 0.010, "code"
+    ),
 }
 ARCHETYPE_ORDER = tuple(ARCHETYPES)
 
@@ -222,7 +226,16 @@ def simulate(cfg: WorldConfig) -> World:
         cfg = calibrate(cfg)
     archs = assign_archetypes(cfg)
     n_weeks = cfg.weeks
-    assets_all, wo_rows, cmp_rows, pm_rows, fail_rows, wo_truth, cmp_truth, site_rows = [], [], [], [], [], [], [], []
+    assets_all, wo_rows, cmp_rows, pm_rows, fail_rows, wo_truth, cmp_truth, site_rows = (
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+    )
     wo_id = cmp_id = fail_id = pm_id = 0
     asset_offset = 0
     dmg_all = []
@@ -260,7 +273,9 @@ def simulate(cfg: WorldConfig) -> World:
             if t >= 0:
                 dmg[:, t] = D
                 h_t = habit_at(t)
-                p_minor = np.clip(h_t.minor_rate * (0.35 + cfg.minor_gain * np.clip(D - 0.5, 0, 1.2)), 0, 0.25)
+                p_minor = np.clip(
+                    h_t.minor_rate * (0.35 + cfg.minor_gain * np.clip(D - 0.5, 0, 1.2)), 0, 0.25
+                )
                 for i in np.flatnonzero(rng.random(n) < p_minor):
                     events.append((t, int(i), "minor", None))
                 p_pre = cfg.pre_cmp_rate * np.clip(D - 0.7, 0, 1.0) * cmp_factor
@@ -326,9 +341,19 @@ def simulate(cfg: WorldConfig) -> World:
                         c_day = created + (0 if k == 0 else int(rng.integers(1, 11)))
                         miss = rng.random() < h.missing_asset_rate
                         wo_rows.append(
-                            (wo_id, s, np.nan if miss else a, c_day, c_day + int(rng.integers(1, 15)), _type_raw(rng, h.scheme, kind_wo), txt)
+                            (
+                                wo_id,
+                                s,
+                                np.nan if miss else a,
+                                c_day,
+                                c_day + int(rng.integers(1, 15)),
+                                _type_raw(rng, h.scheme, kind_wo),
+                                txt,
+                            )
                         )
-                        wo_truth.append((wo_id, fid if k == 0 else fid, "failure" if k == 0 else "failure_dup"))
+                        wo_truth.append(
+                            (wo_id, fid if k == 0 else fid, "failure" if k == 0 else "failure_dup")
+                        )
                         wo_id += 1
                 # 민원
                 p_cmp = (h.complaint_stop if sev == "stop" else h.complaint_degraded) * cat.complaint_factor
@@ -338,7 +363,17 @@ def simulate(cfg: WorldConfig) -> World:
                         sym = str(rng.choice(cat.symptoms))
                         floor = int(floors_arr[i]) if floors_arr[i] >= 0 else int(rng.integers(0, floors))
                         hint = a if (cat.key == "elevator" and rng.random() < 0.8) else None
-                        cmp_rows.append((cmp_id, s, floor, day + int(rng.integers(0, 4)), sym, hint, f"{floor + 1}층 {sym}"))
+                        cmp_rows.append(
+                            (
+                                cmp_id,
+                                s,
+                                floor,
+                                day + int(rng.integers(0, 4)),
+                                sym,
+                                hint,
+                                f"{floor + 1}층 {sym}",
+                            )
+                        )
                         cmp_truth.append((cmp_id, fid))
                         cmp_id += 1
             elif kind == "minor":  # 고장은 아니지만 손상이 커질수록 늘어나는 경미 작업지시
@@ -346,14 +381,24 @@ def simulate(cfg: WorldConfig) -> World:
                 kind_wo = "emergency" if rng.random() < h.p_em_minor else "corrective"
                 miss = rng.random() < h.missing_asset_rate
                 wo_rows.append(
-                    (wo_id, s, np.nan if miss else a, day, day + int(rng.integers(1, 10)), _type_raw(rng, h.scheme, kind_wo), str(rng.choice(MINOR_TEXTS)))
+                    (
+                        wo_id,
+                        s,
+                        np.nan if miss else a,
+                        day,
+                        day + int(rng.integers(1, 10)),
+                        _type_raw(rng, h.scheme, kind_wo),
+                        str(rng.choice(MINOR_TEXTS)),
+                    )
                 )
                 wo_truth.append((wo_id, -1, "minor"))
                 wo_id += 1
             elif kind == "pre_cmp":  # 고장 전에 늘어나는 약한 민원
                 sym = str(rng.choice(cat.symptoms))
                 floor = int(floors_arr[i]) if floors_arr[i] >= 0 else int(rng.integers(0, floors))
-                cmp_rows.append((cmp_id, s, floor, t * 7 + int(rng.integers(0, 7)), sym, None, f"{floor + 1}층 {sym}"))
+                cmp_rows.append(
+                    (cmp_id, s, floor, t * 7 + int(rng.integers(0, 7)), sym, None, f"{floor + 1}층 {sym}")
+                )
                 cmp_truth.append((cmp_id, -1))
                 cmp_id += 1
             else:  # 정기 점검
@@ -362,7 +407,15 @@ def simulate(cfg: WorldConfig) -> World:
                 pm_rows.append((pm_id, s, a, day, grade))
                 pm_id += 1
                 wo_rows.append(
-                    (wo_id, s, a, day, day + int(rng.integers(0, 3)), _type_raw(rng, h.scheme, "preventive"), f"{cat.ko} 정기점검")
+                    (
+                        wo_id,
+                        s,
+                        a,
+                        day,
+                        day + int(rng.integers(0, 3)),
+                        _type_raw(rng, h.scheme, "preventive"),
+                        f"{cat.ko} 정기점검",
+                    )
                 )
                 wo_truth.append((wo_id, -1, "preventive"))
                 wo_id += 1
@@ -371,7 +424,15 @@ def simulate(cfg: WorldConfig) -> World:
                     c_day = day + int(rng.integers(0, 6))
                     miss = rng.random() < h.missing_asset_rate
                     wo_rows.append(
-                        (wo_id, s, np.nan if miss else a, c_day, c_day + int(rng.integers(1, 15)), _type_raw(rng, h.scheme, kind_wo), f"{cat.ko} 점검 후 보수")
+                        (
+                            wo_id,
+                            s,
+                            np.nan if miss else a,
+                            c_day,
+                            c_day + int(rng.integers(1, 15)),
+                            _type_raw(rng, h.scheme, kind_wo),
+                            f"{cat.ko} 점검 후 보수",
+                        )
                     )
                     wo_truth.append((wo_id, -1, "pm_repair"))
                     wo_id += 1
@@ -381,14 +442,20 @@ def simulate(cfg: WorldConfig) -> World:
             for f in range(floors):
                 for _ in range(int(rng.poisson(0.08))):
                     sym = str(rng.choice(COMFORT_SYMPTOMS))
-                    cmp_rows.append((cmp_id, s, f, t * 7 + int(rng.integers(0, 7)), sym, None, f"{f + 1}층 {sym}"))
+                    cmp_rows.append(
+                        (cmp_id, s, f, t * 7 + int(rng.integers(0, 7)), sym, None, f"{f + 1}층 {sym}")
+                    )
                     cmp_truth.append((cmp_id, -1))
                     cmp_id += 1
 
     assets_df = pd.concat(assets_all, ignore_index=True)
     assets_df["install_day"] = -(assets_df["age_years"] * 365).astype(int)
-    wo = pd.DataFrame(wo_rows, columns=["wo_id", "site", "asset", "created_day", "closed_day", "type_raw", "text"])
-    complaints = pd.DataFrame(cmp_rows, columns=["complaint_id", "site", "floor", "day", "symptom", "hint_asset", "text"])
+    wo = pd.DataFrame(
+        wo_rows, columns=["wo_id", "site", "asset", "created_day", "closed_day", "type_raw", "text"]
+    )
+    complaints = pd.DataFrame(
+        cmp_rows, columns=["complaint_id", "site", "floor", "day", "symptom", "hint_asset", "text"]
+    )
     pm = pd.DataFrame(pm_rows, columns=["pm_id", "site", "asset", "day", "grade"])
     failures = pd.DataFrame(fail_rows, columns=["failure_id", "site", "asset", "day", "severity", "category"])
     wo_truth_df = pd.DataFrame(wo_truth, columns=["wo_id", "failure_id", "kind"])
@@ -399,7 +466,22 @@ def simulate(cfg: WorldConfig) -> World:
     bad = rng.random(len(wo)) < 0.005
     wo.loc[bad, "closed_day"] = wo.loc[bad, "created_day"] - rng.integers(1, 5, int(bad.sum()))
     dup_rows = wo.sample(frac=0.01, random_state=cfg.seed)
-    wo = pd.concat([wo, dup_rows], ignore_index=True).sort_values(["created_day", "wo_id"], kind="stable").reset_index(drop=True)
+    wo = (
+        pd.concat([wo, dup_rows], ignore_index=True)
+        .sort_values(["created_day", "wo_id"], kind="stable")
+        .reset_index(drop=True)
+    )
 
     sites = pd.DataFrame(site_rows)
-    return World(cfg, assets_df, wo, complaints, pm, failures, wo_truth_df, cmp_truth_df, sites, meta={"n_exact_dup_wo": len(dup_rows), "damage": np.concatenate(dmg_all)})
+    return World(
+        cfg,
+        assets_df,
+        wo,
+        complaints,
+        pm,
+        failures,
+        wo_truth_df,
+        cmp_truth_df,
+        sites,
+        meta={"n_exact_dup_wo": len(dup_rows), "damage": np.concatenate(dmg_all)},
+    )

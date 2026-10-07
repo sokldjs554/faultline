@@ -96,7 +96,9 @@ def topk_flags(scores: np.ndarray, site: np.ndarray, week: np.ndarray, k: int = 
     return (rank <= k).to_numpy()
 
 
-def evaluate(prep: Prepared, scores: np.ndarray, rows: np.ndarray, own: np.ndarray | None = None, k: int = TOPK) -> dict:
+def evaluate(
+    prep: Prepared, scores: np.ndarray, rows: np.ndarray, own: np.ndarray | None = None, k: int = TOPK
+) -> dict:
     """점수를 평가 행에서 채점한다. 정답(진짜 고장)과 겉보기(정의 라벨) 둘 다 낸다."""
     yt = rows_of(prep, prep.y_truth, rows)
     sel = topk_flags(scores, prep.fs.site[rows], prep.fs.week[rows], k)

@@ -1,11 +1,11 @@
-# faultline — 분석 API + 콘솔 이미지. 산출물(artifacts/)을 이미지에 넣어 두고 서빙한다 (감사 업로드만 즉석 계산).
+# faultline: API + 콘솔 이미지. 산출물(artifacts/)을 이미지에 넣어 두고 서빙한다(정의 평가와 로그 점검만 요청마다 계산).
 FROM python:3.12-slim AS builder
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
 WORKDIR /build
 RUN python -m venv /opt/venv && /opt/venv/bin/pip install --upgrade pip
 COPY pyproject.toml README.md ./
 COPY src ./src
-# 서빙에는 PyTorch 가 필요 없다 (DragonNet 은 오프라인 평가용) — deep 엑스트라를 설치하지 않는다
+# 서빙에는 PyTorch 가 필요 없다(신경망 비교는 오프라인 실험용). deep 엑스트라를 설치하지 않는다
 RUN /opt/venv/bin/pip install .
 
 FROM python:3.12-slim

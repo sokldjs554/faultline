@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import functools
+
 import numpy as np
 import pandas as pd
 
@@ -47,7 +49,17 @@ def _link_flags(w: pd.DataFrame, c: pd.DataFrame, a: pd.DataFrame) -> np.ndarray
     return m.any(1)
 
 
-def binned_counts(wo_norm: pd.DataFrame, assets: pd.DataFrame, n_weeks: int, bin_weeks: int = 4, complaints: pd.DataFrame | None = None) -> dict[int, pd.DataFrame]:
+def _count(b: np.ndarray, n_bins: int, mask: np.ndarray) -> np.ndarray:
+    return np.bincount(b[mask], minlength=n_bins).astype(float)
+
+
+def binned_counts(
+    wo_norm: pd.DataFrame,
+    assets: pd.DataFrame,
+    n_weeks: int,
+    bin_weeks: int = 4,
+    complaints: pd.DataFrame | None = None,
+) -> dict[int, pd.DataFrame]:
     """사이트마다 구간별 건수. np 는 비예방, em 은 긴급, unk 는 분류 불가, tot 는 전체 작업지시."""
     wo = wo_norm.drop_duplicates(subset=["wo_id", "asset", "created_day", "type_raw"])
     n_bins = n_weeks // bin_weeks
@@ -57,14 +69,17 @@ def binned_counts(wo_norm: pd.DataFrame, assets: pd.DataFrame, n_weeks: int, bin
     for site, g in wo.groupby("site"):
         b = np.clip(g["created_day"].to_numpy() // (7 * bin_weeks), 0, n_bins - 1).astype(int)
         kind = g["wo_kind"].to_numpy()
-        count = lambda mask: np.bincount(b[mask], minlength=n_bins).astype(float)  # noqa: E731
+        count = functools.partial(_count, b, n_bins)
         cm = np.zeros(n_bins)
         lk = np.zeros(n_bins)
         c = cmp_by.get(site)
         if c is not None and len(c):
             cb = np.clip(c["day"].to_numpy() // (7 * bin_weeks), 0, n_bins - 1).astype(int)
             flags = _link_flags(g, c, assets[assets["site"] == site])
-            cm, lk = np.bincount(cb, minlength=n_bins).astype(float), np.bincount(cb[flags], minlength=n_bins).astype(float)
+            cm, lk = (
+                np.bincount(cb, minlength=n_bins).astype(float),
+                np.bincount(cb[flags], minlength=n_bins).astype(float),
+            )
         out[int(site)] = pd.DataFrame(
             {
                 "cm": cm,
@@ -84,11 +99,20 @@ def binned_counts(wo_norm: pd.DataFrame, assets: pd.DataFrame, n_weeks: int, bin
 def _z(df: pd.DataFrame, name: str, base: slice, min_var: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
     """신호의 표준화 점수와 원래 값. 기준 구간의 풀링 비율을 기대값으로 쓴다."""
     if name == "np_rate":
-        n, trials, value = df["np"].to_numpy(), df["exposure"].to_numpy(), df["np"].to_numpy() / df["exposure"].to_numpy()
+        n, trials, value = (
+            df["np"].to_numpy(),
+            df["exposure"].to_numpy(),
+            df["np"].to_numpy() / df["exposure"].to_numpy(),
+        )
         p0 = n[base].sum() / max(trials[base].sum(), 1e-9)
         exp, var = p0 * trials, p0 * trials
     else:
-        col = {"em_share": ("em", "np"), "unknown_share": ("unk", "tot"), "missing_share": ("miss", "tot"), "link_share": ("lk", "cm")}[name]
+        col = {
+            "em_share": ("em", "np"),
+            "unknown_share": ("unk", "tot"),
+            "missing_share": ("miss", "tot"),
+            "link_share": ("lk", "cm"),
+        }[name]
         n, trials = df[col[0]].to_numpy(), df[col[1]].to_numpy()
         value = np.where(trials > 0, n / np.maximum(trials, 1), np.nan)
         p0 = n[base].sum() / max(trials[base].sum(), 1e-9)
@@ -138,8 +162,16 @@ def monitor_sites(
         for name in SIGNALS:
             z, value = _z(df, name, base, min_var)
             idx, path = cusum(z, base.stop, k, h)
-            per[name] = {"alarm_week": None if idx is None else int((idx + 1) * bin_weeks), "path": [round(float(x), 3) for x in path]}
+            per[name] = {
+                "alarm_week": None if idx is None else int((idx + 1) * bin_weeks),
+                "path": [round(float(x), 3) for x in path],
+            }
             series[name] = [None if np.isnan(x) else round(float(x), 4) for x in value]
         weeks = [v["alarm_week"] for v in per.values() if v["alarm_week"] is not None]
-        res[site] = {"signals": per, "alarm_week": min(weeks) if weeks else None, "weeks": df["week"].astype(int).tolist(), "series": series}
+        res[site] = {
+            "signals": per,
+            "alarm_week": min(weeks) if weeks else None,
+            "weeks": df["week"].astype(int).tolist(),
+            "series": series,
+        }
     return {"bin_weeks": bin_weeks, "base_weeks": list(base_weeks), "k": k, "h": h, "sites": res}

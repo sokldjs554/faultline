@@ -50,8 +50,8 @@
     } catch (e) { put("hero", text("div", "err", "산출물을 불러오지 못했다: " + e.message)); return; }
     api("/v1/definitions").then((d) => { S.defs = d; renderDefine(); renderBring(); }).catch(() => {});
     api("/v1/schema").then((d) => { S.schema = d; renderBring(); }).catch(() => {});
-    api("/v1/quality/sample").then((d) => { S.qraw = d; if (activeTab() === "quality") renderQuality(); }).catch(() => {});
-    api("/v1/quality/sample-with-code-book").then((d) => { S.qbook = d; }).catch(() => {});
+    S.qraw = S.same.quality.report_without_code_book;
+    S.qbook = S.same.quality.report_with_code_book;
     const m = S.ver.manifest;
     if (m) $("foot-meta").textContent = `v${S.ver.version} · 시드 ${m.base_seeds.join(", ")}`;
     setupControls();
@@ -137,7 +137,8 @@
     $("def-sub").textContent = `${a} 사이트(사이트 ${site.site}, 설비 ${site.n_assets}개). 이 기간 진짜 고장 ${nTruth}건. 속이 빈 점은 진짜 고장과 맞지 않는 사건이다.`;
     const chart = el("div"), tab = el("div");
     put("def-timeline", chart, tab);
-    C.timeline(chart, rows, { x0, x1: W, fmtX: (v) => v + "주", label: "정의별 사건 타임라인" });
+    C.timeline(chart, rows, { x0, x1: W, fmtX: (v) => Math.round(v) + "주", label: "정의별 사건 타임라인" });
+    tab.appendChild(text("div", "sub", "d1 긴급 유형 작업지시만 · d2 긴급과 시정 작업지시 모두 · d3 긴급이거나 같은 증상의 민원이 받쳐 주는 작업지시(민원 군집 포함)"));
     C.table(tab, [
       { h: "정의", k: "name" },
       { h: "사건", k: "n", num: true },
@@ -276,11 +277,11 @@
 
   /* ------------------------------------------------------------------ 품질 */
   function renderQuality() {
-    const rep = S.qmode === "book" && S.qbook ? S.qbook : S.qraw;
+    const rep = S.qmode === "book" ? S.qbook : S.qraw;
     if (!rep) { put("q-kpis", text("div", "empty", "샘플 점검 결과를 불러오는 중이다")); return; }
     const t = rep.total;
     put("q-kpis",
-      C.tile("작업지시", C.fmtN(t.work_orders), "사이트 16곳, 3년"),
+      C.tile("작업지시", C.fmtN(t.work_orders), `사이트 ${rep.sites.length}곳, 3년`),
       C.tile("유형을 못 읽은 행", C.fmtN(t.unknown_type), pc(t.unknown_type / t.work_orders, 1), t.unknown_type ? "bad" : "good"),
       C.tile("설비 번호가 빈 행", C.fmtN(t.missing_asset), pc(t.missing_asset / t.work_orders, 1)),
       C.tile("중복·날짜 역전", C.fmtN(t.exact_duplicates + t.date_inverted), `중복 ${t.exact_duplicates}, 역전 ${t.date_inverted}`),
@@ -325,8 +326,8 @@
     const alarm = d.signals[sig].alarm_week;
     $("mo-sub").textContent = `${SIG[sig]} (4주 단위). ` + (sh ? `이 사이트는 100주에 '${sh[2]}' 습관으로 바뀐다. ` : "습관이 바뀌지 않는 사이트다. ") + (alarm != null ? `이 신호의 경보는 ${alarm}주에 났다.` : "이 신호의 경보는 없었다.");
     const x = (arr) => [{ name: SIG[sig], color: "var(--series-1)", points: weeks.map((w, i) => ({ x: w, y: arr[i] })) }];
-    C.lineChart($("mo-series"), x(vals), { y0: 0, height: 170, fmtX: (v) => v + "주", fmtY: (v) => (sig === "np_rate" ? v.toFixed(2) : pc(v)), marker: sh ? 100 : undefined, xTicks: 6, label: SIG[sig] });
-    C.lineChart($("mo-cusum"), [{ name: "CUSUM (경보 기준 " + M.h + ")", color: "var(--series-2)", points: weeks.map((w, i) => ({ x: w, y: path[i] })) }], { y0: 0, y1: Math.max(M.h * 1.3, ...path), height: 150, refY: M.h, fmtX: (v) => v + "주", fmtY: (v) => v.toFixed(0), marker: sh ? 100 : undefined, xTicks: 6, label: "CUSUM" });
+    C.lineChart($("mo-series"), x(vals), { y0: 0, height: 170, fmtX: (v) => Math.round(v) + "주", fmtY: (v) => (sig === "np_rate" ? v.toFixed(2) : pc(v)), marker: sh ? 100 : undefined, xTicks: 6, label: SIG[sig] });
+    C.lineChart($("mo-cusum"), [{ name: "CUSUM (경보 기준 " + M.h + ")", color: "var(--series-2)", points: weeks.map((w, i) => ({ x: w, y: path[i] })) }], { y0: 0, y1: Math.max(M.h * 1.3, ...path), height: 150, refY: M.h, fmtX: (v) => Math.round(v) + "주", fmtY: (v) => v.toFixed(0), marker: sh ? 100 : undefined, xTicks: 6, label: "CUSUM" });
     C.table($("mo-target"), [
       { h: "바뀐 습관", k: "t" }, { h: "탐지", render: (r) => `${r.v.detected} / ${r.v.n}`, num: true }, { h: "지연(주)", render: (r) => (r.v.delays.length ? r.v.delays.join(", ") : "–"), num: true },
     ], Object.entries(M.by_target).map(([t, v]) => ({ t, v })));
@@ -364,13 +365,13 @@
               ...rep.issues.filter((i) => i.level !== "low").slice(0, 12).map((i) => text("div", "", `사이트 ${i.site}: ${i.text}`)));
           } catch (e) { out.replaceChildren(text("div", "err", e.message)); }
         });
-        up.replaceChildren(file, book, btn, sample);
+        up.replaceChildren(file, book, btn, sample, text("div", "dropped", '샘플 CSV는 사이트 0, 1, 5의 로그다. 사이트 5는 유형 코드가 A1(긴급), B2(시정), C3(예방)이라 위 코드표를 넣어야 읽힌다.'));
       }
     }
     const box = $("bring-def");
     if (!box.dataset.ready && S.defs) {
       box.dataset.ready = "1";
-      const ta = el("textarea", { rows: "16", "aria-label": "고장 정의 YAML", spellcheck: "false" });
+      const ta = el("textarea", { rows: "18", "aria-label": "고장 정의 YAML", spellcheck: "false" });
       ta.style.cssText = "width:100%;font:12px/1.5 ui-monospace,Menlo,monospace;padding:8px;border:1px solid var(--axis);border-radius:8px;background:var(--surface-1);color:var(--text-primary)";
       ta.value = S.defs.template;
       const res = el("div");

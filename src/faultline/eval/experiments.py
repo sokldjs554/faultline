@@ -13,7 +13,9 @@ from faultline.models import fit
 from faultline.quality.contract import normalize_wo, quality_report
 
 AS_OF = P.CUTOFF_WEEK * 7 - 1
-AUDIT_BETA = 2.0  # 현장 확인으로 정의를 고를 때 재현율을 정밀도보다 두 배 무겁게 본다(근거: exp_metric_validity)
+AUDIT_BETA = (
+    2.0  # 현장 확인으로 정의를 고를 때 재현율을 정밀도보다 두 배 무겁게 본다(근거: exp_metric_validity)
+)
 
 
 def _site_auc(scores: np.ndarray, y: np.ndarray, site: np.ndarray) -> float:
@@ -63,7 +65,9 @@ def exp_labels(prep: P.Prepared, defs: dict[str, Definition], tol: int = 14) -> 
         by_arch = {}
         for a in arch.unique():
             sites = arch[arch == a].index
-            ma = match_incidents(inc[inc["site"].isin(sites)], w.failures[w.failures["site"].isin(sites)], tol)
+            ma = match_incidents(
+                inc[inc["site"].isin(sites)], w.failures[w.failures["site"].isin(sites)], tol
+            )
             by_arch[a] = public(ma)
         by_site = []
         for s in sorted(arch.index):
@@ -80,7 +84,11 @@ def exp_labels(prep: P.Prepared, defs: dict[str, Definition], tol: int = 14) -> 
 
 
 # ---------------------------------------------------------------- 2. 정의 민감도
-def exp_sensitivity(prep: P.Prepared, defs: dict[str, Definition], mlp: tuple[str, ...] = ("d1_emergency", "d2_corrective", "d3_corroborated")) -> dict:
+def exp_sensitivity(
+    prep: P.Prepared,
+    defs: dict[str, Definition],
+    mlp: tuple[str, ...] = ("d1_emergency", "d2_corrective", "d3_corroborated"),
+) -> dict:
     te = prep.test_rows
     out: dict = {"models": {}}
     sels: dict[str, np.ndarray] = {}
@@ -134,7 +142,9 @@ def _fbeta(tp: float, pred: float, pos: float, beta: float = 1.0) -> float:
     return (1 + b2) * p * r / (b2 * p + r)
 
 
-def audit_stats(L: np.ndarray, truth_sample: np.ndarray, idx_s1: np.ndarray, idx_s0: np.ndarray, n1_pop: int, n0_pop: int) -> tuple[np.ndarray, np.ndarray]:
+def audit_stats(
+    L: np.ndarray, truth_sample: np.ndarray, idx_s1: np.ndarray, idx_s0: np.ndarray, n1_pop: int, n0_pop: int
+) -> tuple[np.ndarray, np.ndarray]:
     """층화 표본에서 정의별 정밀도와 재현율을 추정한다.
 
     하나라도 고장으로 표시한 창(S1)과 아무도 표시하지 않은 창(S0)에서 따로 뽑고, 층의 크기로 가중한다(Horvitz-Thompson).
@@ -160,13 +170,23 @@ def _fb(prec: np.ndarray, rec: np.ndarray, beta: float) -> np.ndarray:
     return np.where(den > 0, (1 + b2) * prec * rec / np.where(den > 0, den, 1.0), 0.0)
 
 
-def audit_estimate(L: np.ndarray, truth_sample: np.ndarray, idx_s1: np.ndarray, idx_s0: np.ndarray, n1_pop: int, n0_pop: int, beta: float = AUDIT_BETA) -> np.ndarray:
+def audit_estimate(
+    L: np.ndarray,
+    truth_sample: np.ndarray,
+    idx_s1: np.ndarray,
+    idx_s0: np.ndarray,
+    n1_pop: int,
+    n0_pop: int,
+    beta: float = AUDIT_BETA,
+) -> np.ndarray:
     """층화 표본에서 정의별 F-beta 를 추정한다."""
     prec, rec = audit_stats(L, truth_sample, idx_s1, idx_s0, n1_pop, n0_pop)
     return _fb(prec, rec, beta)
 
 
-def draw_audit(L: np.ndarray, n: int, rng: np.random.Generator, share_s1: float = 0.5) -> tuple[np.ndarray, np.ndarray, int, int]:
+def draw_audit(
+    L: np.ndarray, n: int, rng: np.random.Generator, share_s1: float = 0.5
+) -> tuple[np.ndarray, np.ndarray, int, int]:
     """현장에서 확인할 창을 뽑는다. 절반은 어느 정의든 고장으로 표시한 창에서, 나머지는 아무도 표시하지 않은 창에서."""
     flagged = L.any(0)
     s1, s0 = np.flatnonzero(flagged), np.flatnonzero(~flagged)
@@ -177,7 +197,14 @@ def draw_audit(L: np.ndarray, n: int, rng: np.random.Generator, share_s1: float 
     return a1.astype(int), a0.astype(int), len(s1), len(s0)
 
 
-def exp_audit_demo(prep: P.Prepared, defs: dict[str, Definition], n_grid=(10, 20, 40, 80, 160, 320), boot: int = 200, seed: int = 0, beta: float = AUDIT_BETA) -> dict:
+def exp_audit_demo(
+    prep: P.Prepared,
+    defs: dict[str, Definition],
+    n_grid=(10, 20, 40, 80, 160, 320),
+    boot: int = 200,
+    seed: int = 0,
+    beta: float = AUDIT_BETA,
+) -> dict:
     """사이트마다, 확인 건수마다 한 번 뽑은 표본으로 정의별 점수를 추정하고 부트스트랩 구간과 정답을 함께 낸다."""
     rng = np.random.default_rng(seed)
     names = list(defs)
@@ -189,8 +216,16 @@ def exp_audit_demo(prep: P.Prepared, defs: dict[str, Definition], n_grid=(10, 20
             "precision": [float((L[k] & T).sum() / max(L[k].sum(), 1)) for k in range(len(names))],
             "recall": [float((L[k] & T).sum() / max(T.sum(), 1)) for k in range(len(names))],
         }
-        truth["score"] = [float(_fbeta((L[k] & T).sum(), L[k].sum(), T.sum(), beta)) for k in range(len(names))]
-        item = {"archetype": arch[s], "truth": truth, "windows": int(L.shape[1]), "flagged": int(L.any(0).sum()), "by_n": {}}
+        truth["score"] = [
+            float(_fbeta((L[k] & T).sum(), L[k].sum(), T.sum(), beta)) for k in range(len(names))
+        ]
+        item = {
+            "archetype": arch[s],
+            "truth": truth,
+            "windows": int(L.shape[1]),
+            "flagged": int(L.any(0).sum()),
+            "by_n": {},
+        }
         for n in n_grid:
             a1, a0, n1p, n0p = draw_audit(L, n, rng)
             sample = np.concatenate([T[a1], T[a0]])
@@ -216,7 +251,15 @@ def exp_audit_demo(prep: P.Prepared, defs: dict[str, Definition], n_grid=(10, 20
     return out
 
 
-def exp_audit(prep: P.Prepared, defs: dict[str, Definition], n_grid=(10, 20, 40, 80, 160, 320), reps: int = 300, seed: int = 0, share_s1: float = 0.5, beta: float = AUDIT_BETA) -> dict:
+def exp_audit(
+    prep: P.Prepared,
+    defs: dict[str, Definition],
+    n_grid=(10, 20, 40, 80, 160, 320),
+    reps: int = 300,
+    seed: int = 0,
+    share_s1: float = 0.5,
+    beta: float = AUDIT_BETA,
+) -> dict:
     rng = np.random.default_rng(seed)
     names = list(defs)
     res = {"n_grid": list(n_grid), "names": names, "beta": beta, "sites": []}
@@ -255,7 +298,9 @@ def exp_audit(prep: P.Prepared, defs: dict[str, Definition], n_grid=(10, 20, 40,
 
 
 # ---------------------------------------------------------------- 4. 고객 맞춤 정의
-def _assigned_labels(prep: P.Prepared, defs: dict[str, Definition], assign: dict[int, str], as_of: int | None) -> np.ndarray:
+def _assigned_labels(
+    prep: P.Prepared, defs: dict[str, Definition], assign: dict[int, str], as_of: int | None
+) -> np.ndarray:
     """사이트마다 다른 정의를 적용한 라벨 행렬."""
     mats = {name: P.labels_for(prep, defs[name], as_of) for name in set(assign.values())}
     site = prep.world.assets["site"].to_numpy()
@@ -265,7 +310,14 @@ def _assigned_labels(prep: P.Prepared, defs: dict[str, Definition], assign: dict
     return y
 
 
-def pick_with_audit(prep: P.Prepared, defs: dict[str, Definition], n: int, seed: int, share_s1: float = 0.5, beta: float = AUDIT_BETA) -> dict[int, str]:
+def pick_with_audit(
+    prep: P.Prepared,
+    defs: dict[str, Definition],
+    n: int,
+    seed: int,
+    share_s1: float = 0.5,
+    beta: float = AUDIT_BETA,
+) -> dict[int, str]:
     rng = np.random.default_rng(seed)
     names = list(defs)
     out = {}
@@ -277,11 +329,22 @@ def pick_with_audit(prep: P.Prepared, defs: dict[str, Definition], n: int, seed:
     return out
 
 
-def exp_custom(prep: P.Prepared, defs: dict[str, Definition], audit: dict, audit_ns: tuple[int, ...] = (40, 80), draws: int = 3, beta: float = AUDIT_BETA) -> dict:
+def exp_custom(
+    prep: P.Prepared,
+    defs: dict[str, Definition],
+    audit: dict,
+    audit_ns: tuple[int, ...] = (40, 80),
+    draws: int = 3,
+    beta: float = AUDIT_BETA,
+) -> dict:
     """사이트마다 정의를 달리 고르면 모형이 나아지는가."""
     sites = sorted(prep.world.sites["site"])
     oracle = {int(r["site"]): r["best"] for r in audit["sites"]}
-    strategies: dict[str, list[dict[int, str]]] = {f"fixed_{n}": [{s: n for s in sites}] for n in ("d1_emergency", "d2_corrective", "d3_corroborated") if n in defs}
+    strategies: dict[str, list[dict[int, str]]] = {
+        f"fixed_{n}": [{s: n for s in sites}]
+        for n in ("d1_emergency", "d2_corrective", "d3_corroborated")
+        if n in defs
+    }
     for n in audit_ns:
         strategies[f"audit_{n}"] = [pick_with_audit(prep, defs, n, 100 + i, beta=beta) for i in range(draws)]
     strategies["oracle"] = [oracle]
@@ -332,8 +395,13 @@ def exp_maturity(prep: P.Prepared, defs: dict[str, Definition]) -> dict:
         late = np.isin(prep.fs.site[te], arch[arch.isin(["늦게 입력"])].index)
         yt = P.rows_of(prep, prep.y_truth, te)
         r["truth_auc_late_sites"] = float(roc_auc_score(yt[late], s[late])) if late.any() else float("nan")
-        r["truth_ap_late_sites"] = float(average_precision_score(yt[late], s[late])) if late.any() else float("nan")
-        variants[label] = {k: r[k] for k in ("truth_auc", "truth_ap", "truth_per100", "truth_auc_late_sites", "truth_ap_late_sites")}
+        r["truth_ap_late_sites"] = (
+            float(average_precision_score(yt[late], s[late])) if late.any() else float("nan")
+        )
+        variants[label] = {
+            k: r[k]
+            for k in ("truth_auc", "truth_ap", "truth_per100", "truth_auc_late_sites", "truth_ap_late_sites")
+        }
     return {"entry_delay_by_archetype": curve, "training_variants": variants}
 
 
@@ -353,7 +421,7 @@ def exp_quality(prep: P.Prepared, defs: dict[str, Definition]) -> dict:
     m1 = match_incidents(with_book[with_book["site"].isin(code_sites)], f_cs)
     return {
         "report_without_code_book": rep,
-        "report_with_code_book": {"total": rep_book["total"], "issues": rep_book["issues"]},
+        "report_with_code_book": rep_book,
         "code_book_effect_d1": {"sites": code_sites, "without": public(m0), "with": public(m1)},
     }
 
@@ -378,7 +446,13 @@ def window_quality(prep: P.Prepared, defs: dict[str, Definition]) -> dict:
     return out
 
 
-def exp_seed(seed: int, uniform: bool = False, audit_ns: tuple[int, ...] = (40, 80), draws: int = 3, strategies: bool = True) -> dict:
+def exp_seed(
+    seed: int,
+    uniform: bool = False,
+    audit_ns: tuple[int, ...] = (40, 80),
+    draws: int = 3,
+    strategies: bool = True,
+) -> dict:
     """한 시드의 세계에서 정의별 라벨 품질, 모형 성능, 사이트별 정의 선택 전략을 잰다."""
     from faultline.define import spec
     from faultline.sim.world import WorldConfig, simulate
@@ -386,12 +460,20 @@ def exp_seed(seed: int, uniform: bool = False, audit_ns: tuple[int, ...] = (40, 
     defs = spec.builtin()
     world = simulate(WorldConfig(seed=seed, uniform_habit=uniform))
     prep = P.prepare(world)
-    out: dict = {"seed": seed, "uniform": uniform, "n_failures": int(len(world.failures)), "window": window_quality(prep, defs), "models": {}}
+    out: dict = {
+        "seed": seed,
+        "uniform": uniform,
+        "n_failures": int(len(world.failures)),
+        "window": window_quality(prep, defs),
+        "models": {},
+    }
     te = prep.test_rows
     for name, d in defs.items():
         y = P.labels_for(prep, d, AS_OF)
         r, _ = _metrics(prep, _score(prep, y), P.labels_for(prep, d, None))
-        out["models"][name] = {k: r[k] for k in ("truth_auc", "truth_ap", "truth_per100", "truth_site_auc", "own_auc", "own_ap")}
+        out["models"][name] = {
+            k: r[k] for k in ("truth_auc", "truth_ap", "truth_per100", "truth_site_auc", "own_auc", "own_ap")
+        }
     r, _ = _metrics(prep, _score(prep, prep.y_truth), None)
     out["models"]["truth"] = {k: r[k] for k in ("truth_auc", "truth_ap", "truth_per100", "truth_site_auc")}
     D = world.meta["damage"]
@@ -422,10 +504,17 @@ def exp_metric_validity(seed_runs: list[dict]) -> dict:
 
 # ---------------------------------------------------------------- 8. 기록 습관 변화 감시
 SHIFT_WEEK = 100
-SHIFTS = ((0, SHIFT_WEEK, "긴급 안 씀"), (4, SHIFT_WEEK, "표준"), (6, SHIFT_WEEK, "입력 누락"), (12, SHIFT_WEEK, "긴급 남용"))
+SHIFTS = (
+    (0, SHIFT_WEEK, "긴급 안 씀"),
+    (4, SHIFT_WEEK, "표준"),
+    (6, SHIFT_WEEK, "입력 누락"),
+    (12, SHIFT_WEEK, "긴급 남용"),
+)
 
 
-def exp_drift(seeds: tuple[int, ...] = (7, 11, 23, 31, 47), h: float = 10.0, keep_series_for: int = 7) -> dict:
+def exp_drift(
+    seeds: tuple[int, ...] = (7, 11, 23, 31, 47), h: float = 10.0, keep_series_for: int = 7
+) -> dict:
     """습관이 바뀐 사이트를 로그만으로 얼마나 빨리, 얼마나 정확히 잡는가. 바뀌지 않은 세계에서 거짓 경보도 센다."""
     from faultline.define import spec
     from faultline.monitor.drift import monitor_sites
@@ -451,7 +540,16 @@ def exp_drift(seeds: tuple[int, ...] = (7, 11, 23, 31, 47), h: float = 10.0, kee
             aw = v["alarm_week"]
             if site in shifted:
                 fired = [] if aw is None else [n for n, x in v["signals"].items() if x["alarm_week"] == aw]
-                rec["detected"].append({"site": site, "to": next(t for s2, _, t in SHIFTS if s2 == site), "alarm_week": aw, "delay_weeks": None if aw is None or aw < SHIFT_WEEK else aw - SHIFT_WEEK, "false_before": aw is not None and aw < SHIFT_WEEK, "signals": fired})
+                rec["detected"].append(
+                    {
+                        "site": site,
+                        "to": next(t for s2, _, t in SHIFTS if s2 == site),
+                        "alarm_week": aw,
+                        "delay_weeks": None if aw is None or aw < SHIFT_WEEK else aw - SHIFT_WEEK,
+                        "false_before": aw is not None and aw < SHIFT_WEEK,
+                        "signals": fired,
+                    }
+                )
             else:
                 rec["quiet_site_runs"] += 1
                 rec["false_alarm_sites"] += aw is not None
@@ -464,13 +562,23 @@ def exp_drift(seeds: tuple[int, ...] = (7, 11, 23, 31, 47), h: float = 10.0, kee
                 ("before", inc["day"] < day0, w1.failures["day"] < day0),
                 ("after", inc["day"] >= day0, w1.failures["day"] >= day0),
             ):
-                m = match_incidents(inc[sel_i & inc["site"].isin(shifted)], w1.failures[sel_f & w1.failures["site"].isin(shifted)])
+                m = match_incidents(
+                    inc[sel_i & inc["site"].isin(shifted)],
+                    w1.failures[sel_f & w1.failures["site"].isin(shifted)],
+                )
                 row[tag] = {k: m[k] for k in ("precision", "recall", "f1")}
             lab[name] = row
         rec["label_quality_shifted_sites"] = lab
         runs.append(rec)
         if seed == keep_series_for:
-            series = {"weeks": m1["sites"][0]["weeks"], "sites": {str(k): {"signals": v["signals"], "series": v["series"], "alarm_week": v["alarm_week"]} for k, v in m1["sites"].items()}, "shifts": [list(x) for x in SHIFTS]}
+            series = {
+                "weeks": m1["sites"][0]["weeks"],
+                "sites": {
+                    str(k): {"signals": v["signals"], "series": v["series"], "alarm_week": v["alarm_week"]}
+                    for k, v in m1["sites"].items()
+                },
+                "shifts": [list(x) for x in SHIFTS],
+            }
     dets = [d for r in runs for d in r["detected"]]
     found = [d for d in dets if d["delay_weeks"] is not None]
     quiet_runs = sum(r["quiet_site_runs"] for r in runs)
@@ -483,30 +591,42 @@ def exp_drift(seeds: tuple[int, ...] = (7, 11, 23, 31, 47), h: float = 10.0, kee
         "shifts_detected": len(found),
         "delay_median_weeks": float(np.median([d["delay_weeks"] for d in found])) if found else None,
         "delay_max_weeks": int(max(d["delay_weeks"] for d in found)) if found else None,
-        "false_alarm_site_runs": int(sum(r["false_alarm_sites"] for r in runs) + sum(r["control_alarms"] for r in runs)),
+        "false_alarm_site_runs": int(
+            sum(r["false_alarm_sites"] for r in runs) + sum(r["control_alarms"] for r in runs)
+        ),
         "quiet_site_runs": int(quiet_runs + sum(r["control_sites"] for r in runs)),
         "by_target": {},
         "series": series,
     }
     for tgt in sorted({d["to"] for d in dets}):
         g = [d for d in dets if d["to"] == tgt]
-        out["by_target"][tgt] = {"n": len(g), "detected": sum(d["delay_weeks"] is not None for d in g), "delays": [d["delay_weeks"] for d in g if d["delay_weeks"] is not None]}
+        out["by_target"][tgt] = {
+            "n": len(g),
+            "detected": sum(d["delay_weeks"] is not None for d in g),
+            "delays": [d["delay_weeks"] for d in g if d["delay_weeks"] is not None],
+        }
     return out
 
 
 # ---------------------------------------------------------------- 9. 전조 신호 가정에 대한 민감도
-def exp_robustness(strengths: tuple[float, ...] = (0.0, 0.5, 1.0), seeds: tuple[int, ...] = (7, 11, 23)) -> dict:
+def exp_robustness(
+    strengths: tuple[float, ...] = (0.0, 0.5, 1.0), seeds: tuple[int, ...] = (7, 11, 23)
+) -> dict:
     """시뮬레이터는 손상이 클수록 경미한 시정 작업지시와 약한 민원이 늘어난다고 가정한다. 이 전조가 약해지면 정의 순위가 바뀌는지 본다."""
     from faultline.define import spec
     from faultline.sim.world import WorldConfig, simulate
 
-    defs = {k: v for k, v in spec.builtin().items() if k in ("d1_emergency", "d2_corrective", "d3_corroborated")}
+    defs = {
+        k: v for k, v in spec.builtin().items() if k in ("d1_emergency", "d2_corrective", "d3_corroborated")
+    }
     base = WorldConfig()
     out: dict = {"strengths": list(strengths), "seeds": list(seeds), "results": {}}
     for st in strengths:
         rows = []
         for seed in seeds:
-            w = simulate(WorldConfig(seed=seed, minor_gain=base.minor_gain * st, pre_cmp_rate=base.pre_cmp_rate * st))
+            w = simulate(
+                WorldConfig(seed=seed, minor_gain=base.minor_gain * st, pre_cmp_rate=base.pre_cmp_rate * st)
+            )
             prep = P.prepare(w)
             row = {"seed": seed}
             for name, d in defs.items():

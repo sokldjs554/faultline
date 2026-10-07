@@ -55,7 +55,14 @@ class MlpModel:
             def __init__(self, n_in: int):
                 super().__init__()
                 self.emb = nn.Embedding(8, 4)
-                self.body = nn.Sequential(nn.Linear(n_in + 4, 64), nn.ReLU(), nn.Dropout(0.1), nn.Linear(64, 32), nn.ReLU(), nn.Linear(32, 1))
+                self.body = nn.Sequential(
+                    nn.Linear(n_in + 4, 64),
+                    nn.ReLU(),
+                    nn.Dropout(0.1),
+                    nn.Linear(64, 32),
+                    nn.ReLU(),
+                    nn.Linear(32, 1),
+                )
 
             def forward(self, num, cat):
                 return self.body(torch.cat([num, self.emb(cat)], dim=1)).squeeze(1)

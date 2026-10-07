@@ -10,7 +10,7 @@ spec:
         autoscaling.knative.dev/maxScale: "3"
     spec:
       containerConcurrency: 8
-      timeoutSeconds: 900   # 감사 업로드가 수 분 걸릴 수 있다
+      timeoutSeconds: 900   # 정의 평가는 데모 세계를 처음 만들 때 수십 초가 걸린다
       containers:
         - image: asia-northeast3-docker.pkg.dev/PROJECT_ID/faultline/api:latest
           ports: [{containerPort: 8000}]

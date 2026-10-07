@@ -1,35 +1,23 @@
 PY ?= python
 ARTIFACTS ?= artifacts
 
-.PHONY: help install pipeline scenarios pilot curve coverage hunch summary manifest numbers check-numbers demo demo-gif test lint fmt serve docker clean
+.PHONY: help install pipeline base quality audit_demo uniform seeds drift robustness summary manifest numbers check-numbers demo demo-gif test lint fmt serve docker clean
 
 help:
-	@echo "make install       - 개발용 패키지 설치 (CPU torch, 교차 검증용 econml 포함)"
-	@echo "make pipeline      - 실험 전체를 다시 돌리고 정적 데모와 문서 숫자까지 갱신 (약 2시간, 4 vCPU)"
-	@echo "make test          - 테스트 (시뮬레이터, econml 일치, JS 포트 일치, API)"
-	@echo "make serve         - API + 콘솔 (http://localhost:8000/console/)"
+	@echo "make install    - 개발용 패키지 설치 (CPU torch 포함)"
+	@echo "make pipeline   - 실험 전체를 다시 돌리고 정적 데모와 문서 숫자까지 갱신 (4 vCPU 기준 약 10분)"
+	@echo "make test       - 테스트"
+	@echo "make serve      - API + 콘솔 (http://localhost:8000/console/)"
 
 install:
 	$(PY) -m pip install --upgrade pip
 	$(PY) -m pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.4"
-	$(PY) -m pip install -e ".[dev,crosscheck]"
+	$(PY) -m pip install -e ".[dev]"
 
-pipeline: scenarios pilot coverage hunch curve summary manifest demo numbers
+pipeline: base quality audit_demo uniform seeds drift robustness summary manifest demo numbers
 
-scenarios:
-	$(PY) scripts/run_all.py --stage scenarios
-pilot:
-	$(PY) scripts/run_all.py --stage pilot
-curve:
-	$(PY) scripts/run_all.py --stage curve
-coverage:
-	$(PY) scripts/run_all.py --stage coverage
-hunch:
-	$(PY) scripts/run_all.py --stage hunch
-summary:
-	$(PY) scripts/run_all.py --stage summary
-manifest:
-	$(PY) scripts/run_all.py --stage manifest
+base quality audit_demo uniform seeds drift robustness summary manifest:
+	$(PY) scripts/run_all.py --stage $@
 
 numbers:
 	$(PY) scripts/fill_numbers.py --artifacts $(ARTIFACTS)
@@ -60,4 +48,4 @@ serve:
 docker:
 	docker compose up --build
 clean:
-	rm -rf $(ARTIFACTS)/scenarios $(ARTIFACTS)/*.json docs/demo
+	rm -rf $(ARTIFACTS)/*.json docs/demo

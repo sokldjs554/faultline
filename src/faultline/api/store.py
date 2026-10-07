@@ -6,7 +6,18 @@ import json
 import os
 from pathlib import Path
 
-NAMES = ("summary", "base", "uniform", "multiseed", "validity", "drift", "quality", "audit_demo", "robustness", "manifest")
+NAMES = (
+    "summary",
+    "base",
+    "uniform",
+    "multiseed",
+    "validity",
+    "drift",
+    "quality",
+    "audit_demo",
+    "robustness",
+    "manifest",
+)
 
 
 def artifact_dir() -> Path:
@@ -44,15 +55,50 @@ class Store:
         if name == "ranking":
             uni = self.artifact("uniform")
             return {
-                "base": {"models": base["sensitivity"]["models"], "overlap": base["sensitivity"]["overlap"], "topk": base["topk"]},
-                "multi": {"base": {k: multi["base"][k] for k in ("seeds", "models", "window", "best_by_own_auc", "best_by_truth_auc", "auc_spread", "d2_beats_d1")}, "uniform": {k: multi["uniform"][k] for k in ("seeds", "models", "auc_spread")}},
-                "uniform": None if uni is None else {"models": uni["sensitivity"]["models"], "labels": {n: d["overall"] for n, d in uni["labels"]["definitions"].items()}},
+                "base": {
+                    "models": base["sensitivity"]["models"],
+                    "overlap": base["sensitivity"]["overlap"],
+                    "topk": base["topk"],
+                },
+                "multi": {
+                    "base": {
+                        k: multi["base"][k]
+                        for k in (
+                            "seeds",
+                            "models",
+                            "window",
+                            "best_by_own_auc",
+                            "best_by_truth_auc",
+                            "auc_spread",
+                            "d2_beats_d1",
+                        )
+                    },
+                    "uniform": {k: multi["uniform"][k] for k in ("seeds", "models", "auc_spread")},
+                },
+                "uniform": None
+                if uni is None
+                else {
+                    "models": uni["sensitivity"]["models"],
+                    "labels": {n: d["overall"] for n, d in uni["labels"]["definitions"].items()},
+                },
                 "validity": self.artifact("validity"),
                 "robustness": self.artifact("robustness"),
             }
         if name == "audit":
             return {
-                "audit": {k: base["audit"][k] for k in ("n_grid", "p_exact", "p_near", "regret", "n_for_90pct", "names", "beta", "sites")},
+                "audit": {
+                    k: base["audit"][k]
+                    for k in (
+                        "n_grid",
+                        "p_exact",
+                        "p_near",
+                        "regret",
+                        "n_for_90pct",
+                        "names",
+                        "beta",
+                        "sites",
+                    )
+                },
                 "multi": {"audit": multi["base"].get("audit"), "strategies": multi["base"].get("strategies")},
                 "custom": base["custom"],
                 "demo": self.artifact("audit_demo"),

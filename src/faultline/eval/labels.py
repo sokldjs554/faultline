@@ -19,7 +19,12 @@ def match_incidents(incidents: pd.DataFrame, failures: pd.DataFrame, tol_days: i
         fdays = f_by.get(asset)
         if fdays is None:
             continue
-        pairs = [(abs(int(i) - int(f)), a, b) for a, i in enumerate(idays) for b, f in enumerate(fdays) if abs(int(i) - int(f)) <= tol_days]
+        pairs = [
+            (abs(int(i) - int(f)), a, b)
+            for a, i in enumerate(idays)
+            for b, f in enumerate(fdays)
+            if abs(int(i) - int(f)) <= tol_days
+        ]
         pairs.sort()
         used_i, used_f = set(), set()
         for _d, a, b in pairs:
@@ -66,10 +71,14 @@ def event_week_matrix(events: pd.DataFrame, assets: pd.DataFrame, n_weeks: int) 
     return m
 
 
-def window_labels(events: pd.DataFrame, assets: pd.DataFrame, n_weeks: int, horizon_weeks: int = 4) -> np.ndarray:
+def window_labels(
+    events: pd.DataFrame, assets: pd.DataFrame, n_weeks: int, horizon_weeks: int = 4
+) -> np.ndarray:
     """설비 x 주 라벨 행렬. t 주를 마친 시점에서 다음 horizon_weeks 주 안에 사건이 있으면 1. 마지막 주들은 끝까지 관측되지 않아 NaN."""
     m = event_week_matrix(events, assets, n_weeks)
-    cum = np.concatenate([np.zeros((m.shape[0], 1), dtype=np.int32), np.cumsum(m, axis=1)], axis=1)  # cum[:, k] = 0..k-1 주 합
+    cum = np.concatenate(
+        [np.zeros((m.shape[0], 1), dtype=np.int32), np.cumsum(m, axis=1)], axis=1
+    )  # cum[:, k] = 0..k-1 주 합
     y = np.full(m.shape, np.nan)
     for t in range(n_weeks - horizon_weeks):
         y[:, t] = (cum[:, t + 1 + horizon_weeks] - cum[:, t + 1]) > 0

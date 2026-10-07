@@ -209,3 +209,5 @@ pre.code { background: var(--page); border: 1px solid var(--grid); border-radius
 .upload { display: grid; gap: 8px; }
 .upload input[type=file] { font: inherit; }
 .dropped { color: var(--text-secondary); font-size: 12px; }
+.ctrl label { white-space: nowrap; }
+#au-n { width: 150px; }

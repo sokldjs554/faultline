@@ -31,7 +31,9 @@ def _compat(a_cat: np.ndarray) -> np.ndarray:
     return ok
 
 
-def _wo_events(defn: Definition, w: pd.DataFrame, c: pd.DataFrame, a: pd.DataFrame, stats: dict) -> list[tuple[int, int]]:
+def _wo_events(
+    defn: Definition, w: pd.DataFrame, c: pd.DataFrame, a: pd.DataFrame, stats: dict
+) -> list[tuple[int, int]]:
     cand = w[w["wo_kind"].isin(defn.wo_kinds)]
     stats["wo_missing_asset"] += int(cand["asset"].isna().sum())
     cand = cand[cand["asset"].notna()].drop_duplicates(subset=["wo_id", "asset", "created_day", "type_raw"])
@@ -135,7 +137,9 @@ def apply_definition(
             rows += [(int(site), x, d, 1) for x, d in _cluster_events(defn, c, a, stats)]
     ev = pd.DataFrame(rows, columns=["site", "asset", "day", "src"])
     if ev.empty:
-        return DefinitionResult(pd.DataFrame(columns=["incident_id", "site", "asset", "day", "n_records", "evidence"]), stats)
+        return DefinitionResult(
+            pd.DataFrame(columns=["incident_id", "site", "asset", "day", "n_records", "evidence"]), stats
+        )
     ev = ev.sort_values(["asset", "day"], kind="stable").reset_index(drop=True)
     gap = ev.groupby("asset")["day"].diff()
     inc = ((gap.isna()) | (gap > defn.merge_window_days)).cumsum()
@@ -150,7 +154,13 @@ def apply_definition(
             "has_cmp": g["src"].max() == 1,
         }
     ).reset_index(drop=True)
-    out["evidence"] = np.where(out["has_wo"] & out["has_cmp"], "wo+complaint", np.where(out["has_cmp"], "complaint", "wo"))
-    out = out.drop(columns=["has_wo", "has_cmp"]).sort_values(["day", "asset"], kind="stable").reset_index(drop=True)
+    out["evidence"] = np.where(
+        out["has_wo"] & out["has_cmp"], "wo+complaint", np.where(out["has_cmp"], "complaint", "wo")
+    )
+    out = (
+        out.drop(columns=["has_wo", "has_cmp"])
+        .sort_values(["day", "asset"], kind="stable")
+        .reset_index(drop=True)
+    )
     out.insert(0, "incident_id", np.arange(len(out)))
     return DefinitionResult(out, stats)
