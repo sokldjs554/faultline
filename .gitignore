@@ -9,5 +9,4 @@ dist/
 .env
 *.log
 .DS_Store
-# 시뮬레이션 원자료는 `make data` 로 다시 만든다 (artifacts/*.json 과 docs/demo 는 커밋)
-data/*.parquet
+# artifacts/*.json 과 docs/demo 는 커밋한다 (make pipeline 으로 다시 만든다)

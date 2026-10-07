@@ -39,7 +39,7 @@
 - d2의 진짜 AUC는 진짜 고장으로 학습한 모형(<!-- num:summary.auc.truth_label|.3f -->0.644<!-- /num -->)에 가깝다. 특징이 담은 신호의 상한이 거기까지라는 뜻이다
 - 점검 5곳을 고를 때 d1과 d2 모형의 선택이 겹치는 비율은 <!-- num:summary.overlap.d1_d2|.2f -->0.22<!-- /num -->이다(시드 7). 진짜 라벨 모형과 비교해도 <!-- num:summary.overlap.d1_truth|.2f -->0.26<!-- /num --> 안팎이라 어느 정의든 선택이 많이 다르다
 - 점검 5곳 100번당 적중은 사이트 습관에 따라 순위가 바뀐다. 긴급 코드를 안 쓰는 사이트에서 d1은 <!-- num:summary.topk.no_emergency_d1|.1f -->6.9<!-- /num -->으로 무작위(<!-- num:summary.topk.no_emergency_random|.1f -->5.5<!-- /num -->)와 비슷하고 d3는 <!-- num:summary.topk.no_emergency_d3|.1f -->11.5<!-- /num -->이다. 표준 사이트에서는 d1이 <!-- num:summary.topk.standard_d1|.1f -->13.3<!-- /num -->으로 d3(<!-- num:summary.topk.standard_d3|.1f -->11.9<!-- /num -->)보다 높다
-- PyTorch MLP(같은 입력)도 순위가 같다(시드 7). d1 <!-- num:summary.mlp.d1|.3f -->0.579<!-- /num -->, d2 <!-- num:summary.mlp.d2|.3f -->0.649<!-- /num -->, d3 <!-- num:summary.mlp.d3|.3f -->0.642<!-- /num -->, 진짜 라벨 <!-- num:summary.mlp.truth|.3f -->0.653<!-- /num -->. 차이는 모형이 아니라 라벨에서 온다
+- PyTorch MLP(같은 입력)도 순위가 같다(시드 7). d1 <!-- num:summary.mlp.d1|.3f -->0.579<!-- /num -->, d2 <!-- num:summary.mlp.d2|.3f -->0.649<!-- /num -->, d3 <!-- num:summary.mlp.d3|.3f -->0.642<!-- /num -->, 진짜 라벨 <!-- num:summary.mlp.truth|.3f -->0.653<!-- /num -->. 모형 종류가 달라도 순위가 같아서 차이의 원천은 라벨로 보인다
 
 ## 습관이 모두 같은 대조 세계
 
@@ -136,7 +136,7 @@
 - 바뀌지 않은 사이트·실행 <!-- num:summary.drift.quiet_site_runs|d -->140<!-- /num -->건 중 <!-- num:summary.drift.false_alarm_site_runs|d -->3<!-- /num -->건에서 경보가 났다
 - 사이트 하나의 고장은 4주에 3건쯤이라 건수가 적다. 변화가 작으면 몇 달이 지나도 신호가 기준 구간의 잡음 안에 있다
 - 습관이 바뀐 사이트에서 d1의 F1은 바뀌기 전 <!-- num:summary.drift.d1_f1_before|.2f -->0.66<!-- /num -->에서 바뀐 뒤 <!-- num:summary.drift.d1_f1_after|.2f -->0.48<!-- /num -->로 내려간다. 경보를 늦게 받는 동안 라벨은 이미 나빠져 있다
-- 경보는 판정이 아니라 현장 확인을 다시 하라는 신호다
+- 경보는 현장 확인을 다시 하라는 신호이고, 어느 정의가 맞는지는 현장 확인이 판정한다
 
 ## 하지 못한 것
 

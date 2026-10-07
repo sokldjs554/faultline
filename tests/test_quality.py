@@ -4,7 +4,6 @@ import pytest
 
 from faultline.quality.contract import (
     coerce_days,
-    flatline_runs,
     normalize_wo,
     quality_report,
     suggest_code_book,
@@ -109,12 +108,6 @@ def test_issues_are_sorted_by_severity(prep):
     rep = quality_report(prep.world.wo, prep.world.complaints, prep.world.assets, None, prep.world.cfg.weeks)
     order = [("high", "mid", "low").index(i["level"]) for i in rep["issues"]]
     assert order == sorted(order)
-
-
-def test_flatline_runs():
-    v = np.r_[np.arange(10), np.full(30, 5.0), np.arange(10)]
-    assert flatline_runs(v, 24) == [(10, 40)] or flatline_runs(v, 24) == [(9, 40)]
-    assert flatline_runs(np.arange(100.0), 24) == []
 
 
 def test_coerce_days_reads_dates():

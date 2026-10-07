@@ -183,18 +183,6 @@ def quality_report(
     return out
 
 
-def flatline_runs(values: np.ndarray, min_len: int = 24) -> list[tuple[int, int]]:
-    """계량 값이 같은 값으로 길게 이어진 구간(센서 멈춤 의심)을 찾는다. 실제 계량 데이터에 쓰는 검사."""
-    v = np.asarray(values, dtype=float)
-    runs, start = [], 0
-    for i in range(1, len(v) + 1):
-        if i == len(v) or not (v[i] == v[start] or (np.isnan(v[i]) and np.isnan(v[start]))):
-            if i - start >= min_len:
-                runs.append((start, i))
-            start = i
-    return runs
-
-
 def day_origin(wo: pd.DataFrame) -> pd.Timestamp | None:
     """생성일이 날짜 문자열이면 가장 이른 날짜, 이미 숫자면 None."""
     require_columns(wo)
