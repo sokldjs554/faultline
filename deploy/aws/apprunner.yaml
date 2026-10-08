@@ -1,8 +1,0 @@
-# ECR 에 이미지를 올린 뒤 App Runner 서비스 생성 (deploy/aws/push_ecr.sh)
-version: 1.0
-runtime: python3
-run:
-  network: {port: 8000}
-  env:
-    - {name: FAULTLINE_ARTIFACT_DIR, value: /app/artifacts}
-  command: uvicorn faultline.api.main:app --host 0.0.0.0 --port 8000

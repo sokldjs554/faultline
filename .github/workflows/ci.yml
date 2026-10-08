@@ -64,3 +64,10 @@ jobs:
           context: .
           push: false
           tags: faultline:ci
+      - name: Build Lambda image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.lambda
+          push: false
+          tags: faultline-lambda:ci
